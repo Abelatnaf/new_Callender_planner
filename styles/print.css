@@ -39,9 +39,11 @@
     --label-4: #888888;
     --separator: #d0d0d2;
     --separator-strong: #9a9a9e;
-    --blue: #0a5bd3;
-    --blue-soft: #eef4fd;
-    --red: #c0281a;
+    --blue: #5A1830;
+    --blue-soft: #F6ECF0;
+    --red: #A64545;
+    --accent: #5A1830;
+    --on-accent: #ffffff;
     --graphite: #3a3a3c;
     --graphite-soft: #ededee;
     --on-accent: #ffffff;
@@ -66,6 +68,35 @@
   a { text-decoration: none; color: inherit; }
 
   /* --------------------------------------------------------------- sheets */
+
+  /* The document's own pages. On screen each is a Letter-sized card; on paper
+     the @page margin above owns the edge, so the card's padding and its lift
+     both come off or every sheet would be inset twice. */
+  .sheets { display: block; padding: 0; gap: 0; }
+  .page {
+    width: auto;
+    max-width: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: #FAFBFC;
+    break-after: page;
+    page-break-after: always;
+    /* The sheet is exactly the printable area, which is what lets the notes
+       block absorb whatever the day does not use instead of overflowing. */
+    height: calc(11in - 28mm);
+    min-height: 0;
+  }
+  .page:last-child { break-after: auto; page-break-after: auto; }
+
+  /* Nothing in the document may be split across two sheets: a masthead on one
+     page and its day on the next is worse than a short page. */
+  .crest, .caution, .course, .rule, .bar-row, .load__row,
+  .sessions__day, .audit, .first, .due, .row {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .col, .rail__block { break-inside: auto; }
 
   .sheet { break-after: page; page-break-after: always; }
   .sheet:last-child { break-after: auto; page-break-after: auto; }

@@ -71,10 +71,21 @@ PAX says WHO a row is for. Most rows are somebody else's:
 For every row set appliesToMe, and copy the PAX cell verbatim into pax.
 
 TIMES
-  "0700"            an instant - a formation. Give it a sensible short duration.
-  "0600-0715"       a range.
+  "0700"            an instant - a formation. Give it a sensible short duration
+                    AND set endEstimated true, because you invented the end.
+  "0600-0715"       a range. endEstimated is false.
   "1320/CMD-1845"   conditional. Read what you can and lower your confidence.
 Taps and Lights Out bound the night; the day runs to about 2330.
+
+LOCATION AND UNIFORM - COPY THEM, DO NOT PARAPHRASE
+These two columns are the practical half of every row: they answer "where do I
+go" and "what do I wear", which is what the printed page gets carried around to
+answer.
+  location  the Location cell verbatim - "Crozet", "Bricks", "Cormack Hall 115A".
+  uniform   the Uniform cell verbatim - "Class Dyke", "Gym Dyke", "Blouse".
+Empty string when the cell is empty. Never guess either one; an invented room
+number is worse than no room number. If a day states one uniform for the whole
+day at the head of its section, put it on every row of that day.
 
 CLASSIFICATION
   BLOCKED  the cadet must be somewhere: formations, parades, inspections, duty,

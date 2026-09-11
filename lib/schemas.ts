@@ -68,6 +68,18 @@ export const MatrixEventSchema = z.object({
   /** The Matrix's PAX column: who this row is for. */
   pax: z.string().default(""),
   /**
+   * Where it happens, and what to wear.
+   *
+   * Both are columns of the real Matrix and both are what a cadet actually
+   * needs at 0600 - "Crozet" and "Class Dyke" answer the two questions a
+   * printed page is carried around to answer. Dropping them, as this schema
+   * used to, threw away the most practical half of every row.
+   */
+  location: z.string().default(""),
+  uniform: z.string().default(""),
+  /** The Matrix gave a start but no end; the duration below is inferred. */
+  endEstimated: z.boolean().default(false),
+  /**
    * Whether this row is this cadet's problem at all.
    *
    * False means it stays visible but never consumes time - Band Practice for a
@@ -80,11 +92,42 @@ export const MatrixEventSchema = z.object({
   ratcheted: z.boolean().default(false),
 });
 
+/**
+ * What happened during one import, kept so the document can show its working.
+ *
+ * The reference document prints this at the foot of its last page - "20 source
+ * rows filtered out as not applying to a Rat; 33 times estimated because the
+ * matrix gives no end time" - and it is the most trustworthy thing on the page.
+ * A schedule that tells you which parts of it were guessed is one you can
+ * actually rely on; a schedule that hides that is one you find out about at a
+ * formation.
+ */
+export const MatrixAuditSchema = z.object({
+  /** Events the model returned, before anything was dropped. */
+  rowsReturned: z.number().int().default(0),
+  rowsKept: z.number().int().default(0),
+  rowsSkipped: z.number().int().default(0),
+  /** Rows belonging to other companies, classes, the Band, NCAA teams. */
+  notMine: z.number().int().default(0),
+  /** Forced to BLOCKED because the model was not confident enough. */
+  ratcheted: z.number().int().default(0),
+  /** The Matrix gave a start but no end, so the length was inferred. */
+  endsEstimated: z.number().int().default(0),
+  /** Spreadsheet cells before and after the deterministic trim. */
+  cellsBefore: z.number().int().default(0),
+  cellsAfter: z.number().int().default(0),
+  /** Which model actually answered, which is not always the one we asked for. */
+  model: z.string().default(""),
+});
+
 export const MatrixWeekSchema = z.object({
   id: z.string(),
   weekStart: LocalDate,
   events: z.array(MatrixEventSchema),
   source: z.object({ filename: z.string(), importedAt: z.string() }).optional(),
+  // prefault, not default: every field already has one, so the empty object is
+  // an *input* to be parsed rather than a finished value.
+  audit: MatrixAuditSchema.prefault({}),
 });
 
 /* ------------------------------------------------------------ assignments */
@@ -183,6 +226,10 @@ export const GeminiMatrixEventSchema = z.object({
   availability: AvailabilitySchema,
   confidence: z.number().min(0).max(1),
   note: z.string().optional().describe("Why this availability was chosen"),
+  location: z.string().describe("The Location column verbatim, or empty. e.g. Crozet, Bricks, Cormack Hall 115A"),
+  uniform: z.string().describe("The Uniform column verbatim, or empty. e.g. Class Dyke, Gym Dyke, Blouse"),
+  /** Set when the Matrix gave an instant rather than a range and we had to guess a length. */
+  endEstimated: z.boolean().describe("True when the source gave only a start time and the end was inferred"),
 });
 
 export const GeminiMatrixResponseSchema = z.object({
@@ -273,6 +320,14 @@ export const VaultSchema = z.object({
   matrixWeeks: z.array(MatrixWeekSchema).default([]),
   assignments: z.array(AssignmentSchema).default([]),
   plans: z.array(PlanSchema).default([]),
+  /**
+   * When Canvas was last imported.
+   *
+   * Term and MatrixWeek each carry their own `source.importedAt`; assignments
+   * are a merged list with no single source, so the timestamp lives here. The
+   * status panel needs all three to say what is loaded and how stale it is.
+   */
+  canvasImportedAt: z.string().nullable().default(null),
 });
 
 /* ------------------------------------------------------------------ types */
@@ -284,6 +339,7 @@ export type Availability = z.infer<typeof AvailabilitySchema>;
 export type MatrixEventKind = z.infer<typeof MatrixEventKindSchema>;
 export type MatrixEvent = z.infer<typeof MatrixEventSchema>;
 export type MatrixWeek = z.infer<typeof MatrixWeekSchema>;
+export type MatrixAudit = z.infer<typeof MatrixAuditSchema>;
 export type AssignmentKind = z.infer<typeof AssignmentKindSchema>;
 export type Assignment = z.infer<typeof AssignmentSchema>;
 export type Gap = z.infer<typeof GapSchema>;

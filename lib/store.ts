@@ -80,7 +80,14 @@ export type VaultApi = {
   update: (fn: (v: Vault) => Vault) => void;
   setTerm: (term: Term) => void;
   setSettings: (patch: Partial<Settings>) => void;
-  setAssignments: (a: Assignment[]) => void;
+  /**
+   * Replace the backlog.
+   *
+   * `fromCanvas` stamps the import time. Editing one assignment by hand is not
+   * an import, and marking it as one would make the status panel claim Canvas
+   * was refreshed when a checkbox was ticked.
+   */
+  setAssignments: (a: Assignment[], opts?: { fromCanvas?: boolean }) => void;
   upsertMatrixWeek: (w: MatrixWeek) => void;
   upsertPlan: (p: Plan) => void;
   reset: () => void;
@@ -119,9 +126,16 @@ export function useVault(): VaultApi {
     update((v) => ({ ...v, settings: { ...v.settings, ...patch } }));
   }, [update]);
 
-  const setAssignments = useCallback((assignments: Assignment[]) => {
-    update((v) => ({ ...v, assignments }));
-  }, [update]);
+  const setAssignments = useCallback(
+    (assignments: Assignment[], opts?: { fromCanvas?: boolean }) => {
+      update((v) => ({
+        ...v,
+        assignments,
+        canvasImportedAt: opts?.fromCanvas ? new Date().toISOString() : v.canvasImportedAt,
+      }));
+    },
+    [update],
+  );
 
   const upsertMatrixWeek = useCallback((week: MatrixWeek) => {
     update((v) => ({

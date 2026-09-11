@@ -194,7 +194,7 @@ const MON = "2026-09-07";
 const row = (over: Partial<GeminiMatrixResponse["events"][number]>) => ({
   title: "Event", raw: "Event", day: "MO" as const, start: "18:00", end: "20:00",
   kind: "other" as const, availability: "BLOCKED" as const, confidence: 0.95,
-  pax: "Corps", appliesToMe: true, ...over,
+  pax: "Corps", appliesToMe: true, location: "", uniform: "", endEstimated: false, ...over,
 });
 
 function freeAfter(events: GeminiMatrixResponse["events"]) {

@@ -9,9 +9,10 @@
  */
 import { useCallback, useState } from "react";
 import { ANY_FILE, Dropzone } from "@/components/Dropzone";
+import { IntakeStatus } from "@/components/IntakeStatus";
 import { KeyGate } from "@/components/KeyGate";
 import { detectFile, routeTo } from "@/lib/detect";
-import { type Report, importCanvas, importMatrix, importTerm } from "@/lib/importers";
+import { type Report, describeStage, importCanvas, importMatrix, importTerm } from "@/lib/importers";
 import { useVault } from "@/lib/store";
 import type { Course, Term } from "@/lib/schemas";
 import {
@@ -28,12 +29,15 @@ export default function SetupPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<Report | null>(null);
   const [paste, setPaste] = useState("");
+  const [progress, setProgress] = useState<string | null>(null);
 
   const runTerm = useCallback(async (payload: FormData) => {
     setBusy(true);
     setMsg(null);
     try {
-      const { report, term } = await importTerm(payload);
+      const { report, term } = await importTerm(payload, (stage, detail) =>
+        setProgress(describeStage(stage, detail)),
+      );
       if (term) {
         api.setTerm(term);
         setPaste("");
@@ -41,6 +45,7 @@ export default function SetupPage() {
       setMsg(report);
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }, [api]);
 
@@ -74,7 +79,7 @@ export default function SetupPage() {
         const { report, assignments } = importCanvas(
           await file.text(), vault.assignments, vault.settings.timezone,
         );
-        if (assignments) api.setAssignments(assignments);
+        if (assignments) api.setAssignments(assignments, { fromCanvas: true });
         setMsg({ ...report, lines: [...prefix, ...report.lines] });
         return;
       }
@@ -86,6 +91,7 @@ export default function SetupPage() {
         weekStart: monday,
         timezone: vault.settings.timezone,
         cadet: vault.settings.cadet,
+        onProgress: (stage, detail) => setProgress(describeStage(stage, detail)),
       });
       if (week) api.upsertMatrixWeek(week);
       setMsg({
@@ -95,6 +101,7 @@ export default function SetupPage() {
       });
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }, [api, runTerm, vault.assignments, vault.settings.cadet, vault.settings.timezone]);
 
@@ -176,7 +183,9 @@ export default function SetupPage() {
 
         <KeyGate />
 
-        <div className="grid-2">
+        <IntakeStatus vault={vault} weekStart={weekStart(todayLocal(vault.settings.timezone))} />
+
+        <div className="grid-2" style={{ marginTop: "var(--s-6)" }}>
           <Dropzone
             title="Drop your schedule"
             hint="Screenshot · PDF · Excel · CSV — the Matrix and Canvas .ics work here too"
@@ -205,6 +214,12 @@ export default function SetupPage() {
             </button>
           </div>
         </div>
+
+        {progress && (
+          <div className="notice" role="status" aria-live="polite" style={{ marginTop: "var(--s-6)" }}>
+            <span className="working">{progress}</span>
+          </div>
+        )}
 
         {msg && (
           <div className={`notice${msg.kind === "bad" ? " notice--signal" : ""}`} style={{ marginTop: "var(--s-6)" }}>

@@ -43,7 +43,7 @@ function ev(
   return {
     id, title, raw: title, date, startMin, endMin, kind, availability,
     confidence: 0.95, confirmedByUser: false, ratcheted: false,
-    pax: "Corps", appliesToMe: true,
+    pax: "Corps", appliesToMe: true, location: "", uniform: "", endEstimated: false,
   };
 }
 export { ev };

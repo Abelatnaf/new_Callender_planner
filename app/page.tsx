@@ -16,6 +16,7 @@ import { KeyGate } from "@/components/KeyGate";
 import { keyHeaders } from "@/lib/apikey";
 import { Briefing } from "@/components/Briefing";
 import { Hero } from "@/components/Hero";
+import { IntakeStatus } from "@/components/IntakeStatus";
 import { BlockSheet } from "@/components/BlockSheet";
 import { useVault, planFor, weekFor, currentWeekStart } from "@/lib/store";
 import { buildWeekInventory, labeledMeetingsOn } from "@/lib/gaps";
@@ -182,13 +183,11 @@ export default function WeekPage() {
               </div>
             )}
 
-            {events.length === 0 && (
-              <div className="notice no-print" style={{ marginTop: "var(--s-6)" }}>
-                <div className="notice__title">No Matrix loaded for this week</div>
-                Only your class schedule is carving up these days, so the free time below is
-                optimistic. <Link href="/intake" style={{ color: "inherit" }}>Load the Matrix →</Link>
-              </div>
-            )}
+            {/* Supersedes the old "no Matrix loaded" notice: the same warning,
+                for all three inputs at once, and visible before it bites. */}
+            <div className="no-print" style={{ marginTop: "var(--s-6)" }}>
+              <IntakeStatus vault={vault} weekStart={monday} compact />
+            </div>
 
             <div className="ribbon-board" style={{ marginTop: "var(--s-8)" }}>
               <div className="ribbon-board__inner">

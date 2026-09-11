@@ -164,16 +164,39 @@ export function useApiKey() {
   return { key, setKey, ready, durable, origin, hasKey: key.trim().length > 0 };
 }
 
-/** Whether the server carries its own key, so the browser need not. */
-export function useServerKey() {
-  const [serverKey, setServerKey] = useState<boolean | null>(null);
+/** What /api/health reports about this deployment's own key. */
+export type Health = {
+  ok: boolean;
+  serverKey: boolean;
+  keyProblem: string | null;
+  keyWarning: string | null;
+  keyNeedsTrim: boolean;
+  models: { parse: string[]; plan: string[] };
+};
+
+/**
+ * Ask the server about itself, once per mount.
+ *
+ * Null means the question has not been answered yet - either still in flight or
+ * unreachable. Callers must treat null as "do not know", never as "no key":
+ * flashing a key prompt at someone whose deployment is perfectly configured is
+ * exactly the thing this whole path exists to avoid.
+ */
+export function useHealth(): Health | null {
+  const [health, setHealth] = useState<Health | null>(null);
   useEffect(() => {
     let cancelled = false;
     fetch("/api/health")
       .then((r) => r.json())
-      .then((d) => { if (!cancelled) setServerKey(Boolean(d?.serverKey)); })
-      .catch(() => { if (!cancelled) setServerKey(null); });
+      .then((d) => { if (!cancelled) setHealth(d as Health); })
+      .catch(() => { /* leave it unknown */ });
     return () => { cancelled = true; };
   }, []);
-  return serverKey;
+  return health;
+}
+
+/** Whether the server carries its own key, so the browser need not. */
+export function useServerKey() {
+  const health = useHealth();
+  return health === null ? null : Boolean(health.serverKey);
 }

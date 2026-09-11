@@ -5,7 +5,7 @@ import type { Assignment, GeminiMatrixResponse, GeminiTermResponse } from "@/lib
 const ev = (over: Partial<GeminiMatrixResponse["events"][number]> = {}) => ({
   title: "BRC", raw: "BRC", day: "MO" as const, start: "06:30", end: "07:00",
   kind: "formation" as const, availability: "BLOCKED" as const, confidence: 0.95,
-  pax: "Corps", appliesToMe: true, ...over,
+  pax: "Corps", appliesToMe: true, location: "", uniform: "", endEstimated: false, ...over,
 });
 
 const resp = (events: GeminiMatrixResponse["events"]): GeminiMatrixResponse => ({

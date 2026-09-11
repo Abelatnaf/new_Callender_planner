@@ -11,9 +11,10 @@
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { ANY_FILE, Dropzone } from "@/components/Dropzone";
+import { IntakeStatus } from "@/components/IntakeStatus";
 import { KeyGate } from "@/components/KeyGate";
 import { detectFile, routeTo } from "@/lib/detect";
-import { importCanvas, importMatrix } from "@/lib/importers";
+import { describeStage, importCanvas, importMatrix } from "@/lib/importers";
 import { useVault, weekFor } from "@/lib/store";
 import { CONFIDENCE_FLOOR } from "@/lib/convert";
 import type { Availability, MatrixEvent } from "@/lib/schemas";
@@ -29,6 +30,7 @@ export default function IntakePage() {
   const [icsBusy, setIcsBusy] = useState(false);
   const [matrixMsg, setMatrixMsg] = useState<Feedback>(null);
   const [icsMsg, setIcsMsg] = useState<Feedback>(null);
+  const [progress, setProgress] = useState<string | null>(null);
 
   const monday = useMemo(
     () => addDays(weekStart(todayLocal(vault.settings.timezone)), offset * 7),
@@ -60,7 +62,7 @@ export default function IntakePage() {
         const { report, assignments } = importCanvas(
           await file.text(), vault.assignments, vault.settings.timezone,
         );
-        if (assignments) api.setAssignments(assignments);
+        if (assignments) api.setAssignments(assignments, { fromCanvas: true });
         setIcsMsg(withPrefix(report));
       } finally {
         setIcsBusy(false);
@@ -86,16 +88,19 @@ export default function IntakePage() {
 
     setMatrixBusy(true);
     setMatrixMsg(null);
+    setProgress(null);
     try {
       const { report, week } = await importMatrix(file, {
         weekStart: monday,
         timezone: vault.settings.timezone,
         cadet: vault.settings.cadet,
+        onProgress: (stage, detail) => setProgress(describeStage(stage, detail)),
       });
       if (week) api.upsertMatrixWeek(week);
       setMatrixMsg(withPrefix(report));
     } finally {
       setMatrixBusy(false);
+      setProgress(null);
     }
   }, [api, monday, vault.assignments, vault.settings.cadet, vault.settings.timezone]);
 
@@ -132,7 +137,9 @@ export default function IntakePage() {
 
         <KeyGate />
 
-        <div className="grid-2">
+        <IntakeStatus vault={vault} weekStart={monday} />
+
+        <div className="grid-2" style={{ marginTop: "var(--s-6)" }}>
           <div>
             <Dropzone
               title="Drop the Matrix"
@@ -142,6 +149,11 @@ export default function IntakePage() {
               loaded={week?.source?.filename ?? null}
               onFile={(f) => void handleDrop(f, "matrix")}
             />
+            {progress && (
+              <div className="notice" role="status" aria-live="polite" style={{ marginTop: "var(--s-4)" }}>
+                <span className="working">{progress}</span>
+              </div>
+            )}
             <Note msg={matrixMsg} />
           </div>
 

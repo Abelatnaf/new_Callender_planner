@@ -18,7 +18,7 @@ export function Empty({
       <ol style={{ listStyle: "none", marginTop: "var(--s-6)", maxWidth: "var(--measure)" }}>
         {lines.map((l, i) => (
           <li key={l} style={{ display: "flex", gap: "var(--s-4)", padding: "var(--s-2) 0", borderBottom: "1px solid var(--separator)" }}>
-            <span className="num" style={{ fontSize: "1.25rem", width: "2ch", color: "var(--label-4)" }}>
+            <span className="num" style={{ fontSize: "1.25rem", width: "2ch", color: "var(--accent)" }}>
               {String(i + 1).padStart(2, "0")}
             </span>
             <span style={{ fontSize: "var(--t-sub)", lineHeight: 1.5 }}>{l}</span>

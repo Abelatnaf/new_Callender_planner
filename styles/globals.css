@@ -1,6 +1,7 @@
 @import "./fonts.css";
 @import "./tokens.css";
 @import "./ribbon.css";
+@import "./document.css";
 @import "./print.css";
 
 /* ===========================================================================
@@ -27,9 +28,12 @@ html {
 body {
   background: var(--void);
   color: var(--ink);
+  /* An oxblood dawn over the top of the page. Tokenised per theme because the
+     alpha that reads as a whisper on near-black stains near-white: the same
+     values left light-mode body text at 2.4:1. */
   background-image:
-    radial-gradient(80rem 40rem at 50% -18rem, rgba(90, 107, 255, 0.16), transparent 70%),
-    radial-gradient(50rem 28rem at 88% -6rem, rgba(165, 107, 255, 0.10), transparent 70%);
+    radial-gradient(80rem 40rem at 50% -18rem, var(--wash-1), transparent 70%),
+    radial-gradient(50rem 28rem at 88% -6rem, var(--wash-2), transparent 70%);
   background-attachment: fixed;
   font-family: var(--font);
   font-size: var(--t-sub);
@@ -67,12 +71,12 @@ h1 { font-size: var(--t-title1); letter-spacing: var(--track-hero); }
 h2 { font-size: var(--t-title2); }
 h3 { font-size: var(--t-lg); font-weight: 650; }
 
-.hero {
-  font-size: var(--t-hero);
-  font-weight: 700;
-  letter-spacing: var(--track-hero);
-  line-height: 1.04;
-}
+/* There was a type-scale utility called .hero here. It collided with the .hero
+   LAYOUT component below, so the whole hero section inherited 128px type and
+   -0.04em tracking — which, because em tracking computes against the element's
+   own size and then inherits as an absolute length, reached the 13px labels
+   inside as letter-spacing: -5.12px and drew their glyphs on top of one
+   another. .hero__num already carries the display type it was meant for. */
 
 /* The small uppercase label from the old design is gone: Apple uses sentence
    case at a smaller size and lighter colour instead of tracked-out caps. */
@@ -248,18 +252,24 @@ h3 { font-size: var(--t-lg); font-weight: 650; }
 .btn:active:not(:disabled) { transform: scale(0.97); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* The primary action wears the institution: gold on black, oxblood on paper.
+   Both carry their text at better than 7:1, which the old day-band amber did
+   not manage against white in light mode. */
 .btn--solid {
-  background: linear-gradient(135deg, var(--day), var(--day-2));
-  color: var(--on-light);
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  color: var(--on-accent-fg);
   border-color: transparent;
-  --glow: var(--day);
+  --glow: var(--accent);
   box-shadow: var(--bloom);
   font-weight: 700;
 }
 .btn--solid:hover:not(:disabled) { filter: brightness(1.1); box-shadow: var(--bloom-lg); }
 
-.btn--signal { background: var(--red); color: #fff; font-weight: 600; }
-.btn--signal:hover:not(:disabled) { background: var(--red); opacity: 0.9; }
+/* --alert is tuned to be *seen* against black; as a fill behind white text it
+   only reaches 3.2:1. The solid variant is the same red, deep enough to carry
+   the label a destructive action depends on. */
+.btn--signal { background: var(--alert-solid); color: #fff; font-weight: 600; border-color: transparent; }
+.btn--signal:hover:not(:disabled) { background: var(--alert-solid); filter: brightness(1.12); }
 
 .btn--ghost { background: transparent; box-shadow: none; color: var(--blue); }
 .btn--ghost:hover:not(:disabled) { background: var(--blue-soft); box-shadow: none; }
@@ -353,7 +363,7 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); c
   line-height: 1.5;
   color: var(--label-2);
 }
-.notice--signal { background: var(--red-soft); border-color: rgba(255, 77, 94, 0.3); color: var(--ink); }
+.notice--signal { background: var(--red-soft); border-color: color-mix(in srgb, var(--alert) 38%, transparent); color: var(--ink); }
 .notice__title { font-size: var(--t-sub); font-weight: 600; color: var(--label); margin-bottom: 3px; }
 .notice a { color: var(--blue); text-decoration: none; font-weight: 500; }
 .notice a:hover { text-decoration: underline; }
@@ -714,4 +724,89 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); c
   background: var(--red-soft);
   color: var(--ink);
   font-size: var(--t-footnote);
+}
+
+
+/* ===========================================================================
+   STATUS — what is loaded, and what is not.
+
+   Three files feed this app on three different schedules, and a week missing
+   its Matrix looks exactly like a week with nothing on it. Those are opposite
+   situations, so the panel states which inputs are in rather than leaving it
+   to be inferred from a schedule that reads wrong.
+   =========================================================================== */
+
+.status {
+  display: grid;
+  gap: 1px;
+  background: var(--void-edge);
+  border: 1px solid var(--void-edge);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.status__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  padding: var(--s-4) var(--s-5);
+  background: var(--void-2);
+}
+
+.status__dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ink-4);
+  box-shadow: 0 0 0 3px var(--void-2), 0 0 0 4px transparent;
+}
+
+/* Colour is never the only signal: the headline says it too, and a visually
+   hidden word says it to a screen reader. */
+.status__row--in    .status__dot { background: var(--c1); box-shadow: 0 0 10px -1px var(--c1); }
+.status__row--stale .status__dot { background: var(--caution); box-shadow: 0 0 10px -1px var(--caution); }
+.status__row--out   .status__dot { background: var(--ink-4); }
+
+.status__body { flex: 1 1 12rem; min-width: 0; }
+
+.status__top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.status__label {
+  font-size: var(--t-caption);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  flex: 0 0 auto;
+  min-width: 5.5rem;
+}
+
+.status__headline {
+  font-size: var(--t-sub);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: var(--track-body);
+}
+
+.status__row--out .status__headline { color: var(--ink-2); font-weight: 500; }
+
+.status__detail {
+  margin-top: 2px;
+  font-size: var(--t-footnote);
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+
+.status--compact .status__row { padding: var(--s-3) var(--s-4); }
+
+@media (max-width: 560px) {
+  .status__label { min-width: 0; }
+  .status__row { padding: var(--s-3) var(--s-4); }
 }

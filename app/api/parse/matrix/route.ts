@@ -16,6 +16,9 @@ import { readWorkbook, renderWorkbookForModel } from "@/lib/xlsx";
 import { readCsv } from "@/lib/csv";
 import { weekStart, todayLocal, weekDates, WEEKDAY_LONG, weekdayOf } from "@/lib/time";
 
+/** A trimmed Matrix runs to tens of KB; past this it was never trimmed. */
+const MAX_GRID_CHARS = 2_000_000;
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
@@ -30,11 +33,38 @@ export async function POST(request: NextRequest) {
       form.get("cadet") ? JSON.parse(String(form.get("cadet"))) : {},
     );
 
-    if (!upload) return fail("No file was uploaded.", 400, "no_file");
+    // The browser trims a CSV Matrix before sending it, so what arrives is the
+    // grid the model reads rather than megabytes of fill-right residue. The
+    // file path below still works for anything else, and for older clients.
+    const preTrimmed = String(form.get("grid") ?? "");
+    const filename = preTrimmed
+      ? String(form.get("filename") ?? "matrix.csv")
+      : upload?.name ?? "matrix";
+    const trim = {
+      cellsBefore: Number(form.get("cellsBefore") ?? 0) || 0,
+      cellsAfter: Number(form.get("cellsAfter") ?? 0) || 0,
+      model: "",
+    };
+
+    if (!upload && !preTrimmed) return fail("No file was uploaded.", 400, "no_file");
 
     const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
-    if (isCsv(upload.name, upload.type)) {
+    if (preTrimmed) {
+      if (!preTrimmed.trim()) return fail("That file appears to be empty.", 422, "empty_file");
+      // A trimmed Matrix is tens of KB. Anything past this was not trimmed, and
+      // would cost the caller a minute before Gemini refused it anyway.
+      if (preTrimmed.length > MAX_GRID_CHARS) {
+        return fail(
+          `That grid is ${(preTrimmed.length / 1e6).toFixed(1)}M characters, which is too much for one request.`,
+          413,
+          "too_large",
+        );
+      }
+      parts.push({ text: preTrimmed });
+    } else if (!upload) {
+      return fail("No file was uploaded.", 400, "no_file");
+    } else if (isCsv(upload.name, upload.type)) {
       // The real Matrix exports as CSV, 2.4MB of which ~74% is spreadsheet
       // fill-right residue. renderWorkbookForModel trims that before sending.
       const wb = readCsv(upload.bytes.toString("utf8"), upload.name);
@@ -87,7 +117,8 @@ export async function POST(request: NextRequest) {
       apiKey: callerKey(request),
     });
 
-    const conversion = toMatrixWeek(response, upload.name, anchor);
+    trim.model = model;
+    const conversion = toMatrixWeek(response, filename, anchor, trim);
 
     return Response.json({
       week: conversion.week,
