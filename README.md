@@ -177,22 +177,40 @@ components/Ribbon.tsx   the signature component
 styles/                 tokens, globals, ribbon, print
 ```
 
-### Design
+### Design — your week is made of light
 
-Print-native Swiss brutalism. The screen and the printout are the same artifact
-— nothing is rearranged at print time except page breaks.
+Every calendar draws the *events*. This one draws the **gaps**, because the
+question the app exists to answer is *"which hours are actually mine?"* — and
+drawing that answer as empty space was backwards.
 
-Four visual states, no legend required: **solid ink** is time the Institute
-takes, **45° hatch** is time you hold but cannot leave the room for, a
-**hairline box** is work you chose to put there, and **bare paper** is free. You
-do not read a calendar and infer your free time; you see it, as the white left
-on the page.
+So the free time glows, and the obligations are the void it is carved out of.
+More light means more time. There is no interpretation step between looking and
+knowing.
 
-Archivo 900 for display, JetBrains Mono with tabular figures for all data, warm
-newsprint paper, and vermilion as the only chromatic colour — meaning exactly
-one thing: at risk. Zero radius, zero shadow, no cards; structure comes from
-hairline rules and negative space. Webfonts are vendored under `public/fonts`
-(both SIL OFL 1.1) rather than linked to a CDN.
+| | |
+|---|---|
+| **glowing band** | free — *yours* |
+| **dimmed, frosted** | yours, but confined to quarters (CQ) |
+| **dark void** | taken from you — formation, class, duty |
+| **solid chip in the light** | work you claimed, coloured by course |
+
+**The light carries a second signal.** Its hue sweeps with the hour — gold
+through the morning, cyan at midday, violet in the evening, indigo at night — so
+the *colour* of a window tells you *when* it falls. A gold week has mornings; a
+violet week does not. A long Sunday reads as a full sunrise-to-night sweep,
+which is both better looking and strictly more informative than a flat bar.
+
+Dark-first, because glow does not exist on white. Light mode is a genuine
+inversion rather than a dimmed copy: free time becomes saturated colour on
+white, obligations become solid graphite. Same sentence, told in ink.
+
+Real SF Pro renders on Apple hardware — the font stack puts the system face
+first, so nothing downloads there; Inter is vendored under `public/fonts`
+(SIL OFL 1.1) as the substitute everywhere else.
+
+**Print inverts one more time, and gains from it.** On paper the free time is
+simply white and the obligations are the filled shapes — which is what a printed
+schedule wants, and costs a fraction of the toner a glowing week would.
 
 ---
 

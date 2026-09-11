@@ -91,23 +91,63 @@
   .ribbon-board__inner { min-width: 0 !important; }
   .ribbon-row:hover { background: none; }
 
-  .ribbon { background: #fff; border: 0.5pt solid var(--separator); border-radius: 3pt; }
   .ribbon::before { opacity: 0.5; }
 
-  /* Outlined rather than solid: same meaning, a fraction of the toner.
-     The Letter-width track is under half the on-screen one, so print type and
-     padding both step down and the time suffix is dropped entirely - a course
-     code that reads is worth more than a start time the axis already shows. */
-  .bar {
+  /* On paper the inversion pays off directly: free time is simply white, and
+     obligations are the filled shapes. That is what a printed schedule wants,
+     and it uses a fraction of the toner a glowing week would. */
+  .ribbon { background: #fff; border: 0.5pt solid var(--separator); border-radius: 3pt; }
+  .gap {
+    background: #fff !important;
+    box-shadow: none !important;
+    filter: none !important;
+    border-radius: 2pt;
+  }
+  .gap--bound {
+    background-image: repeating-linear-gradient(-45deg, #bbb 0 0.4pt, transparent 0.4pt 3.5pt) !important;
+    border: 0.4pt solid #d5d5d8;
+  }
+  .gap--bound::before { display: none; }
+  .gap__len { display: none; }
+  .gap__tag { color: #555 !important; opacity: 1; }
+
+  .void {
+    background: var(--graphite) !important;
+    color: #fff !important;
+    box-shadow: none !important;
     border-radius: 2.5pt;
     font-size: 5.4pt;
     padding-inline: 1.5pt;
     letter-spacing: -0.03em;
     font-weight: 600;
   }
-  .bar__time { display: none !important; }
-  .bar--tight { font-size: 5.4pt; padding-inline: 1pt; }
-  .bar--ai::after { display: none; }
+  .void__time { display: none !important; }
+  .void--tight { font-size: 5.4pt; padding-inline: 1pt; }
+  .void--ai::after, .gap--ai::after { display: none; }
+
+  .chip {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1pt solid currentColor;
+    box-shadow: none !important;
+    font-size: 5.4pt;
+    padding-inline: 1.5pt;
+    font-weight: 700;
+  }
+  .chip__time { display: none !important; }
+  .chip.is-urgent { color: var(--red) !important; }
+
+  /* The hero is a screen device; paper gets the tallies it already had. */
+  .hero__week, .legend { display: none !important; }
+  .hero { display: block; padding: 0 0 8pt; }
+  .hero__num {
+    font-size: 22pt;
+    background: none !important;
+    -webkit-text-fill-color: #000 !important;
+    color: #000 !important;
+  }
+  .hero__cap { font-size: 8pt; color: #555; margin-top: 2pt; }
+  .hero__stats { border-top: 0.5pt solid var(--separator); padding-top: 5pt; gap: 18pt; }
   .bar--ink { background: var(--graphite) !important; color: #fff !important; }
   .bar--hatch {
     background: #fff !important;

@@ -1,56 +1,42 @@
 /* ===========================================================================
-   THE RIBBON
+   THE RIBBON — your week, made of light
 
-   A day as a horizontal strip of time, in the language of Apple Calendar and
-   Screen Time: rounded capsules floating on a soft inset track.
+   THE INVERSION: every calendar draws the events. This draws the gaps.
 
-   The information design is unchanged from the first build — only the surface
-   is new:
+   The product exists to answer "which hours are actually mine?", so the answer
+   is the thing that glows, and the obligations are the void it is carved out
+   of. More light means more time. Nothing to decode.
 
-     graphite capsule     imposed on you       formation, class, duty
-     tinted + striped     yours but confined   CQ, room-bound study
-     blue capsule         work you chose       a planned block
-     empty track          free                 the thing worth seeing
-
-   Free time is still the visible white space. It just reads as breathing room
-   now rather than bare paper.
+   The glow hue shifts with the hour, so the colour of your free time also
+   tells you when it falls — a gold week has mornings, a night-blue week does
+   not.
    =========================================================================== */
 
 .ribbon-board { min-width: 0; max-width: 100%; overflow-x: auto; }
 
 .ribbon-row {
   display: grid;
-  grid-template-columns: 92px 1fr;
+  grid-template-columns: 96px 1fr;
   align-items: center;
-  gap: var(--s-3);
-  padding: 5px 0;
-  border-radius: var(--r-md);
-  transition: background 0.2s var(--ease);
+  gap: var(--s-4);
+  padding: var(--s-2) 0;
 }
-.ribbon-row:hover { background: var(--bg-hover); }
-
-.ribbon-row--today .ribbon-stub__day { color: var(--blue); }
 .ribbon-row--today .ribbon-stub__date {
-  background: var(--blue);
-  color: var(--on-accent);
+  color: var(--void);
+  background: var(--ink);
   border-radius: var(--r-pill);
-  padding: 1px 9px;
-  font-weight: 600;
+  padding: 1px 10px;
 }
 
 /* --- the day stub ------------------------------------------------------ */
 
-.ribbon-stub {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-left: var(--s-2);
-}
+.ribbon-stub { display: flex; flex-direction: column; gap: 3px; }
 .ribbon-stub__day {
   font-size: var(--t-caption);
   font-weight: 600;
-  color: var(--label-3);
-  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .ribbon-stub__date {
   font-size: var(--t-sub);
@@ -60,96 +46,131 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* --- the track --------------------------------------------------------- */
+/* --- the band ----------------------------------------------------------
+   The track itself is the void. Light is added to it, not taken from it. */
 
 .ribbon {
   position: relative;
   height: var(--ribbon-h);
-  background: var(--bg-sunken);
+  background: var(--taken);
   border-radius: var(--r-md);
   overflow: hidden;
+  box-shadow: var(--inset);
 }
 .ribbon--dense { height: var(--ribbon-h-dense); border-radius: var(--r-sm); }
 
-/* Hour gridlines, barely there — structure without noise. */
+/* Hour marks, barely present — structure without noise. */
 .ribbon::before {
   content: "";
   position: absolute;
   inset: 0;
   background-image: repeating-linear-gradient(
-    to right,
-    var(--separator) 0 1px,
-    transparent 1px var(--hour-w, 5.88%)
+    to right, var(--void-edge) 0 1px, transparent 1px var(--hour-w, 5.88%)
   );
-  opacity: 0.7;
+  opacity: 0.5;
   pointer-events: none;
+  z-index: 1;
 }
 
-/* --- capsules ---------------------------------------------------------- */
+/* ==========================================================================
+   LIGHT — free time. The primary painted layer, and the point of the app.
+   ========================================================================== */
 
-.bar {
+.gap {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
-  padding-inline: 9px;
-  gap: 6px;
-  overflow: hidden;
-  white-space: nowrap;
+  justify-content: center;
   border-radius: var(--r-xs);
-  font-size: var(--t-caption);
-  font-weight: 550;
-  letter-spacing: -0.005em;
-  min-width: 0;
-  transform-origin: left center;
-}
-.ribbon--dense .bar { top: 3px; bottom: 3px; padding-inline: 6px; }
-
-/* GRAPHITE — time taken from you. Solid and heavy, but not alarming. */
-.bar--ink {
-  background: var(--graphite);
-  color: #fff;
-  box-shadow: var(--shadow-1);
+  background: linear-gradient(90deg, var(--lit-a), var(--lit-b));
+  box-shadow: var(--bloom);
+  transition: filter 0.28s var(--ease-out), box-shadow 0.28s var(--ease-out);
 }
 
-/* TINTED + STRIPED — yours, but you cannot leave the room. */
-.bar--hatch {
-  background: var(--graphite-soft);
-  color: var(--label-2);
-  border: 1px solid var(--separator);
+/* The four times of day. Each sets its own fill and its own glow colour, so
+   the bloom is always the light's own hue rather than a generic halo. */
+.gap--dawn  { --lit-a: var(--dawn);  --lit-b: var(--dawn-2);  --glow: var(--dawn); }
+.gap--day   { --lit-a: var(--day);   --lit-b: var(--day-2);   --glow: var(--day); }
+.gap--dusk  { --lit-a: var(--dusk);  --lit-b: var(--dusk-2);  --glow: var(--dusk); }
+.gap--night { --lit-a: var(--night); --lit-b: var(--night-2); --glow: var(--night); }
+
+.gap:hover { filter: brightness(1.22) saturate(1.1); box-shadow: var(--bloom-lg); }
+
+/* Time you hold but cannot leave the room for: the same light, seen through
+   frosted glass. Dimmer, desaturated, textured — present but not free. */
+.gap--bound {
+  filter: saturate(0.4) brightness(0.6);
+  box-shadow: var(--bloom-sm);
+}
+.gap--bound::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   background-image: repeating-linear-gradient(
-    -45deg,
-    var(--separator) 0 1px,
-    transparent 1px 7px
+    -45deg, rgba(0, 0, 0, 0.32) 0 2px, transparent 2px 7px
   );
 }
+.gap--bound:hover { filter: saturate(0.6) brightness(0.8); }
 
-/* BLUE — work you chose to put here. The only bar you can act on. */
-.bar--work {
-  background: var(--blue);
-  color: var(--on-accent);
-  border: none;
-  cursor: pointer;
-  box-shadow: var(--shadow-blue);
-  font-weight: 600;
-  transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease), filter 0.18s var(--ease);
+.gap__len {
+  position: relative;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--on-light);
+  opacity: 0;
+  transition: opacity 0.22s var(--ease);
+  letter-spacing: -0.01em;
+  z-index: 1;
 }
-.bar--work:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: var(--shadow-2), var(--shadow-blue); }
-.bar--work:active { transform: scale(0.98); }
-.bar--work.is-locked { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5), var(--shadow-blue); }
+.gap:hover .gap__len { opacity: 0.82; }
 
-/* A block whose deadline is inside 48 hours. */
-.bar--work.is-urgent { background: var(--red); box-shadow: 0 4px 14px rgba(255, 59, 48, 0.3); }
-.bar--work.is-urgent:hover { box-shadow: var(--shadow-2), 0 4px 14px rgba(255, 59, 48, 0.3); }
+/* A label for room-bound light, since "CQ" is worth naming. */
+.gap__tag {
+  position: relative;
+  z-index: 1;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
 
-/* Marks a classification the model made rather than the cadet, so a wrong call
-   stays visible before it costs anything.
+/* ==========================================================================
+   VOID — obligations. Matte, recessed, inert. They absorb light.
+   ========================================================================== */
 
-   Absolutely positioned on purpose: as a flex item this dot consumed label
-   width and truncated "BRC" to "B." — a marker that hides the thing it marks
-   is worse than no marker. */
-.bar--ai::after {
+.void {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  background: var(--taken);
+  border-radius: var(--r-xs);
+  box-shadow: inset 0 0 0 1px var(--taken-edge), inset 0 2px 6px rgba(0, 0, 0, 0.5);
+  font-size: var(--t-caption);
+  font-weight: 550;
+  color: var(--on-taken);
+  letter-spacing: -0.01em;
+}
+.void--tight { padding-inline: 3px; font-size: 0.6875rem; letter-spacing: -0.02em; }
+.void__label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.void__time { margin-left: auto; padding-left: 8px; opacity: 0.6; font-variant-numeric: tabular-nums; }
+
+/* A classification the model made rather than the cadet — visible so a wrong
+   call is caught before it costs a formation, but never stealing label width. */
+.void--ai::after,
+.gap--ai::after {
   content: "";
   position: absolute;
   top: 3px;
@@ -159,51 +180,56 @@
   border-radius: 50%;
   background: currentColor;
   opacity: 0.5;
-  pointer-events: none;
 }
-/* On a bar too narrow to hold a label, the dot would sit on top of the text. */
-.bar--tight::after { display: none; }
+.void--tight::after { display: none; }
 
-.bar__label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.bar__time { margin-left: auto; padding-left: 8px; opacity: 0.72; font-variant-numeric: tabular-nums; font-weight: 500; }
+/* ==========================================================================
+   CLAIMED — work chips, sitting inside your own light.
+   ========================================================================== */
 
-/* Narrow capsules give up their breathing room to keep the label whole. A
-   30-minute formation is a ~38px capsule; "BRC" only fits if the padding and
-   the type both step down. */
-.bar--tight {
-  padding-inline: 3px;
-  gap: 0;
-  font-size: 0.6875rem;
-  letter-spacing: -0.02em;
-  justify-content: center;
-}
-.bar--tight .bar__time { display: none; }
-
-@media (max-width: 900px) {
-  .bar__time { display: none; }
-}
-
-/* --- free gaps --------------------------------------------------------- */
-
-.gap {
+.chip {
   position: absolute;
-  top: 4px; bottom: 4px;
+  top: 6px;
+  bottom: 6px;
+  z-index: 4;
   display: flex;
   align-items: center;
-  justify-content: center;
+  padding-inline: 8px;
+  gap: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: none;
   border-radius: var(--r-xs);
-  transition: background 0.2s var(--ease);
+  background: var(--chip, var(--ink));
+  color: var(--on-light);
+  font-size: var(--t-caption);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform 0.2s var(--ease-spring), box-shadow 0.2s var(--ease);
 }
-.gap::after {
-  content: attr(data-duration);
-  font-size: 0.625rem;
-  font-weight: 600;
-  color: var(--label-3);
-  opacity: 0;
-  transition: opacity 0.2s var(--ease);
+.ribbon--dense .chip { top: 4px; bottom: 4px; padding-inline: 5px; }
+.chip:hover { transform: translateY(-1px) scale(1.02); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55); }
+.chip:active { transform: scale(0.98); }
+.chip--tight { padding-inline: 4px; gap: 0; font-size: 0.6875rem; }
+
+/* Per-course colour. Distinct by assignment, never by hash. */
+.chip--h0 { --chip: var(--c0); } .chip--h1 { --chip: var(--c1); }
+.chip--h2 { --chip: var(--c2); } .chip--h3 { --chip: var(--c3); }
+.chip--h4 { --chip: var(--c4); } .chip--h5 { --chip: var(--c5); }
+.chip--h6 { --chip: var(--c6); } .chip--h7 { --chip: var(--c7); }
+
+.chip.is-locked { box-shadow: 0 0 0 2px var(--ink), 0 2px 10px rgba(0, 0, 0, 0.45); }
+.chip.is-urgent { --chip: var(--alert); color: #fff; box-shadow: 0 0 18px -2px var(--alert-glow); }
+
+.chip__label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.chip__time { margin-left: auto; padding-left: 7px; opacity: 0.75; font-variant-numeric: tabular-nums; font-weight: 600; }
+.chip--tight .chip__time { display: none; }
+
+@media (max-width: 900px) {
+  .chip__time, .void__time { display: none; }
 }
-.gap:hover { background: var(--blue-soft); }
-.gap:hover::after { opacity: 1; }
 
 /* --- now line ---------------------------------------------------------- */
 
@@ -211,35 +237,27 @@
   position: absolute;
   top: 0; bottom: 0;
   width: 2px;
-  background: var(--red);
-  border-radius: 2px;
+  z-index: 6;
+  background: var(--ink);
+  box-shadow: 0 0 10px 1px var(--ink);
   pointer-events: none;
-  z-index: 3;
-}
-.ribbon__now::before {
-  content: "";
-  position: absolute;
-  top: -3px; left: -3px;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--red);
 }
 
 /* --- the hour scale ---------------------------------------------------- */
 
 .ribbon-scale {
   display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: var(--s-3);
-  margin-bottom: var(--s-1);
+  grid-template-columns: 96px 1fr;
+  gap: var(--s-4);
+  margin-bottom: var(--s-2);
 }
-.ribbon-scale__track { position: relative; height: 16px; }
+.ribbon-scale__track { position: relative; height: 14px; }
 .ribbon-scale__tick {
   position: absolute;
   top: 0;
   font-size: 0.625rem;
   font-weight: 500;
-  color: var(--label-4);
+  color: var(--ink-4);
   font-variant-numeric: tabular-nums;
   transform: translateX(-50%);
 }
@@ -247,42 +265,39 @@
 
 /* --- load meter -------------------------------------------------------- */
 
-.meter {
-  position: relative;
-  height: 4px;
-  background: var(--separator);
-  border-radius: var(--r-pill);
-  margin-top: 5px;
-  overflow: hidden;
-}
-.meter__fill {
-  position: absolute;
-  inset-block: 0;
-  left: 0;
-  background: var(--blue);
-  border-radius: var(--r-pill);
-  transition: width 0.5s var(--ease-out);
-}
-.meter__fill.is-over { background: var(--orange); }
+.meter { position: relative; height: 3px; background: var(--void-edge); border-radius: var(--r-pill); margin-top: 4px; overflow: hidden; }
+.meter__fill { position: absolute; inset-block: 0; left: 0; background: var(--ink-2); border-radius: var(--r-pill); transition: width 0.6s var(--ease-out); }
+.meter__fill.is-over { background: var(--alert); }
 .meter__cap { display: none; }
 
-/* --- entrance ---------------------------------------------------------- */
+/* --- entrance: the light comes up --------------------------------------- */
 
 @media (prefers-reduced-motion: no-preference) {
-  .ribbon .bar {
-    animation: pop 0.45s var(--ease-out) both;
-    animation-delay: calc(var(--row, 0) * 45ms + var(--i, 0) * 12ms);
+  .ribbon .gap {
+    animation: lightUp 0.7s var(--ease-out) both;
+    animation-delay: calc(var(--row, 0) * 60ms + var(--i, 0) * 18ms);
   }
-  @keyframes pop {
-    from { opacity: 0; transform: scaleX(0.82); }
-    to   { opacity: 1; transform: scaleX(1); }
+  .ribbon .chip {
+    animation: chipIn 0.5s var(--ease-spring) both;
+    animation-delay: calc(var(--row, 0) * 60ms + 260ms);
   }
+  @keyframes lightUp {
+    from { opacity: 0; filter: brightness(0.2); }
+    to   { opacity: 1; filter: none; }
+  }
+  @keyframes chipIn {
+    from { opacity: 0; transform: translateY(5px) scale(0.94); }
+    to   { opacity: 1; transform: none; }
+  }
+  /* The bound state sets filter itself, so it must not be animated away. */
+  .ribbon .gap--bound { animation-name: fadeUp; }
+  @keyframes fadeUp { from { opacity: 0; } to { opacity: 1; } }
 }
 
 /* --- narrow screens ---------------------------------------------------- */
 
 @media (max-width: 760px) {
   .ribbon-board { padding-bottom: var(--s-2); }
-  .ribbon-board__inner { min-width: 620px; }
-  .ribbon-row, .ribbon-scale { grid-template-columns: 72px 1fr; }
+  .ribbon-board__inner { min-width: 640px; }
+  .ribbon-row, .ribbon-scale { grid-template-columns: 74px 1fr; }
 }

@@ -15,9 +15,10 @@ import { AskPanel } from "@/components/AskPanel";
 import { KeyGate } from "@/components/KeyGate";
 import { keyHeaders } from "@/lib/apikey";
 import { Briefing } from "@/components/Briefing";
+import { Hero } from "@/components/Hero";
 import { useVault, planFor, weekFor, currentWeekStart } from "@/lib/store";
 import { buildWeekInventory, labeledMeetingsOn } from "@/lib/gaps";
-import { isOverdue } from "@/lib/layout";
+import { buildCourseHues, isOverdue } from "@/lib/layout";
 import {
   addDays, formatDuration, instantToLocal, shortDate, stamp, todayLocal, weekDates, weekStart,
 } from "@/lib/time";
@@ -45,6 +46,11 @@ export default function WeekPage() {
   const inventory = useMemo(
     () => buildWeekInventory(monday, vault.term, events, vault.settings),
     [monday, vault.term, events, vault.settings],
+  );
+
+  const hues = useMemo(
+    () => buildCourseHues((vault.term?.courses ?? []).map((c) => c.code)),
+    [vault.term],
   );
 
   const now = instantToLocal(new Date(), tz);
@@ -125,24 +131,14 @@ export default function WeekPage() {
           />
         ) : (
           <>
-            <div className="tallies">
-              <div className="tally">
-                <span className="tally__n">{formatDuration(inventory.freeMinutes)}</span>
-                <span className="tally__l">Actually yours</span>
-              </div>
-              <div className="tally">
-                <span className="tally__n">{formatDuration(obligationMin)}</span>
-                <span className="tally__l">Taken from you</span>
-              </div>
-              <div className="tally">
-                <span className="tally__n">{formatDuration(committed)}</span>
-                <span className="tally__l">Work placed</span>
-              </div>
-              <div className={`tally${overdue ? " tally--signal" : ""}`}>
-                <span className="tally__n">{overdue}</span>
-                <span className="tally__l">Overdue</span>
-              </div>
-            </div>
+            <Hero
+              freeMinutes={inventory.freeMinutes}
+              takenMinutes={obligationMin}
+              committedMinutes={committed}
+              overdue={overdue}
+              days={inventory.days}
+              today={today}
+            />
 
             <KeyGate />
 
@@ -182,6 +178,7 @@ export default function WeekPage() {
                     isToday={day.date === today}
                     rowIndex={i}
                     capacityMin={vault.settings.dailyCapacityMin}
+                    hues={hues}
                   />
                 ))}
               </div>
@@ -230,25 +227,17 @@ export default function WeekPage() {
 
 function Legend() {
   const items = [
-    { cls: "bar--ink", label: "Mandatory — you have no say" },
-    { cls: "bar--hatch", label: "Yours, but confined to quarters" },
-    { cls: "bar--work", label: "Work you chose to put here" },
-    { cls: "", label: "Free" },
+    { cls: "legend__swatch--lit", label: "Yours — colour shows the time of day" },
+    { cls: "legend__swatch--bound", label: "Yours, but confined to quarters" },
+    { cls: "legend__swatch--void", label: "Taken from you" },
+    { cls: "legend__swatch--chip", label: "Work you put into your own time" },
   ];
   return (
-    <div style={{ display: "flex", gap: "var(--s-6)", flexWrap: "wrap", marginTop: "var(--s-4)", paddingTop: "var(--s-4)", borderTop: "1px solid var(--separator)" }}>
+    <div className="legend">
       {items.map((it) => (
-        <span key={it.label} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-          <span
-            className={it.cls ? `bar ${it.cls}` : ""}
-            style={{
-              position: "static", width: 26, height: 12, flex: "none", padding: 0,
-              border: it.cls ? undefined : "1px solid var(--separator)",
-              background: it.cls ? undefined : "transparent",
-              animation: "none",
-            }}
-          />
-          <span className="label">{it.label}</span>
+        <span key={it.label} className="legend__item">
+          <span className={`legend__swatch ${it.cls}`} />
+          {it.label}
         </span>
       ))}
     </div>
