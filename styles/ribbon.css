@@ -220,6 +220,16 @@
 .chip--h4 { --chip: var(--c4); } .chip--h5 { --chip: var(--c5); }
 .chip--h6 { --chip: var(--c6); } .chip--h7 { --chip: var(--c7); }
 
+/* A finished sitting is no longer a claim on the day, so it recedes into the
+   light it was sitting in rather than competing with what is still to do. */
+.chip.is-done {
+  opacity: 0.42;
+  box-shadow: none;
+  filter: saturate(0.5);
+}
+.chip.is-done .chip__label { text-decoration: line-through; }
+.chip__tick { font-weight: 800; flex: none; }
+
 .chip.is-locked { box-shadow: 0 0 0 2px var(--ink), 0 2px 10px rgba(0, 0, 0, 0.45); }
 .chip.is-urgent { --chip: var(--alert); color: #fff; box-shadow: 0 0 18px -2px var(--alert-glow); }
 

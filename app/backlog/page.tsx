@@ -7,7 +7,7 @@
  * beats a number the model guessed, and the planner honours that override.
  */
 import { useMemo, useState } from "react";
-import { useVault } from "@/lib/store";
+import { planFor, useVault } from "@/lib/store";
 import type { Assignment, AssignmentKind } from "@/lib/schemas";
 import { isOverdue, isUrgent } from "@/lib/layout";
 import {
@@ -20,6 +20,20 @@ export default function BacklogPage() {
   const api = useVault();
   const { vault, ready } = api;
   const [filter, setFilter] = useState<Filter>("open");
+
+  // One assignment is usually several sittings, so progress is per block.
+  const sittings = useMemo(() => {
+    const map = new Map<string, { done: number; total: number }>();
+    for (const p of vault.plans) {
+      for (const b of p.blocks) {
+        const e = map.get(b.assignmentId) ?? { done: 0, total: 0 };
+        e.total++;
+        if (b.done) e.done++;
+        map.set(b.assignmentId, e);
+      }
+    }
+    return map;
+  }, [vault.plans]);
 
   const now = instantToLocal(new Date(), vault.settings.timezone);
   const nowStamp = stamp(now.date, now.minutes);
@@ -110,6 +124,7 @@ export default function BacklogPage() {
                   <th>Item</th>
                   <th>Kind</th>
                   <th style={{ width: 110 }}>Estimate</th>
+                  <th>Sittings</th>
                   <th>In</th>
                 </tr>
               </thead>
@@ -156,6 +171,13 @@ export default function BacklogPage() {
                           })}
                           aria-label={`Estimate in minutes for ${a.title}`}
                         />
+                      </td>
+                      <td className="num-cell muted">
+                        {(() => {
+                          const s2 = sittings.get(a.id);
+                          if (!s2) return "—";
+                          return `${s2.done} of ${s2.total}`;
+                        })()}
                       </td>
                       <td className="num-cell muted">
                         {overdue ? <span className="signal">overdue</span> : days === 0 ? "today" : `${days}d`}

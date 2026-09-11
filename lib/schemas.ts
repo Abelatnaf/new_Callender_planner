@@ -122,6 +122,8 @@ export const WorkBlockSchema = z.object({
   endMin: Minute,
   rationale: z.string().optional(),
   locked: z.boolean().default(false),   // user-placed blocks survive replanning
+  /** Ticked off as the week is worked. Additive, so stored vaults still parse. */
+  done: z.boolean().default(false),
 });
 
 export const UnplacedSchema = z.object({

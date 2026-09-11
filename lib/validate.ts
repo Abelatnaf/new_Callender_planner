@@ -15,7 +15,7 @@
 import type { Assignment, Gap, Plan, Unplaced, WorkBlock } from "./schemas";
 import type { WeekInventory } from "./gaps";
 import type { GeminiPlanResponse } from "./schemas";
-import { overlaps } from "./intervals";
+import { normalize, overlaps } from "./intervals";
 import { MIN_BLOCK, SNAP, snap, snapCeil, stamp, type LocalDate } from "./time";
 
 export const REASONS = {
@@ -26,6 +26,8 @@ export const REASONS = {
   IN_THE_PAST: "this slot has already elapsed",
   COLLIDES_WITH_OBLIGATION: "this slot collides with a mandatory obligation",
   NO_ROOM_LEFT: "every slot before the deadline is already committed",
+  TOO_SHORT: "that would be shorter than the minimum useful block",
+  OVERLAPS_WORK: "another work block is already in that time",
   ALREADY_DONE: "the assignment is marked done",
 } as const;
 
@@ -92,6 +94,126 @@ function firstFreeSlotInGap(
 
   for (const c of candidates) if (fits(c)) return c;
   return null;
+}
+
+/* ------------------------------------------------- the shared safety check */
+
+export type PlacementCheck =
+  | { ok: true }
+  | { ok: false; reason: string; detail?: string };
+
+export type PlacementContext = {
+  inventory: WeekInventory;
+  /** Every other block already placed. The block under test must not be here. */
+  others: WorkBlock[];
+  nowStamp: number;
+};
+
+/**
+ * Is this a legal place for work?
+ *
+ * Extracted so that a block nudged by hand and a block placed by the model are
+ * judged by exactly the same rules. Before this existed the checks lived inline
+ * in the placement loop, which meant any hand-editing feature would have
+ * silently bypassed the entire ratchet - the one safety property this product
+ * is built on.
+ *
+ * Free time is taken as the *merged* run of the day's gaps, not a single gap:
+ * an open window and the CQ window that follows it are contiguous in time but
+ * separate Gap objects, and a block spanning that seam is perfectly legal.
+ */
+export function checkPlacement(opts: {
+  date: LocalDate;
+  startMin: number;
+  endMin: number;
+  assignment: Assignment;
+  ctx: PlacementContext;
+  /** Ignore this block id when testing overlap - it is the one being moved. */
+  ignoreBlockId?: string;
+  /**
+   * How much of the past to refuse.
+   *
+   * "start" (the default) is right for the model: do not *plan* work into a
+   * slot that has already begun. "end" is right for a hand edit, because the
+   * cadet is the authority on their own past - at 1930, inside a 1900-2000
+   * block, extending it to 2100 is a legitimate thing to want, and refusing it
+   * because the block started half an hour ago is simply wrong.
+   */
+  pastPolicy?: "start" | "end";
+}): PlacementCheck {
+  const { date, startMin, endMin, assignment, ctx, ignoreBlockId } = opts;
+  const pastPolicy = opts.pastPolicy ?? "start";
+  const day = ctx.inventory.days.find((d) => d.date === date);
+
+  if (assignment.status === "done") {
+    return { ok: false, reason: REASONS.ALREADY_DONE };
+  }
+  if (endMin - startMin < MIN_BLOCK) {
+    return { ok: false, reason: REASONS.TOO_SHORT, detail: `${endMin - startMin}min` };
+  }
+  const pastEdge = pastPolicy === "end" ? endMin : startMin;
+  if (stamp(date, pastEdge) < ctx.nowStamp) {
+    return { ok: false, reason: REASONS.IN_THE_PAST, detail: `${date} ${pastEdge}` };
+  }
+  if (stamp(date, endMin) > stamp(assignment.dueDate, assignment.dueMin)) {
+    return { ok: false, reason: REASONS.PAST_DEADLINE, detail: `due ${assignment.dueDate}` };
+  }
+
+  // The block must sit inside free time. This subsumes both "not on an
+  // obligation" and "not outside the waking day", since gaps are bounded by
+  // each.
+  const free = normalize(day?.gaps ?? []);
+  const fits = free.some((f) => startMin >= f.startMin && endMin <= f.endMin);
+  if (!fits) {
+    return { ok: false, reason: REASONS.COLLIDES_WITH_OBLIGATION, detail: `${date} ${startMin}-${endMin}` };
+  }
+
+  // Defense in depth: the gap inventory should already guarantee the above.
+  const blocked = day?.blocked ?? [];
+  if (blocked.some((iv) => overlaps({ startMin, endMin }, iv))) {
+    return { ok: false, reason: REASONS.COLLIDES_WITH_OBLIGATION, detail: "overlapped an obligation" };
+  }
+
+  const clash = ctx.others.some(
+    (b) => b.id !== ignoreBlockId && b.date === date && overlaps({ startMin, endMin }, b),
+  );
+  if (clash) {
+    return { ok: false, reason: REASONS.OVERLAPS_WORK, detail: "another block is already here" };
+  }
+
+  return { ok: true };
+}
+
+/* ------------------------------------------------------------ hand edits */
+
+export type EditResult = PlacementCheck & { block?: WorkBlock };
+
+/** Shift a block on the clock grid. Refuses rather than clamping silently. */
+export function moveBlock(block: WorkBlock, deltaMin: number, assignment: Assignment, ctx: PlacementContext): EditResult {
+  const step = snap(deltaMin);
+  const startMin = block.startMin + step;
+  const endMin = block.endMin + step;
+  if (startMin < 0 || endMin > 24 * 60) {
+    return { ok: false, reason: REASONS.COLLIDES_WITH_OBLIGATION, detail: "outside the day" };
+  }
+  const check = checkPlacement({
+    date: block.date, startMin, endMin, assignment, ctx,
+    ignoreBlockId: block.id, pastPolicy: "end",
+  });
+  return check.ok ? { ok: true, block: { ...block, startMin, endMin } } : check;
+}
+
+/** Grow or shrink a block from its end, on the clock grid. */
+export function resizeBlock(block: WorkBlock, deltaMin: number, assignment: Assignment, ctx: PlacementContext): EditResult {
+  const endMin = block.endMin + snap(deltaMin);
+  if (endMin - block.startMin < MIN_BLOCK) {
+    return { ok: false, reason: REASONS.TOO_SHORT, detail: `minimum is ${MIN_BLOCK} minutes` };
+  }
+  const check = checkPlacement({
+    date: block.date, startMin: block.startMin, endMin, assignment, ctx,
+    ignoreBlockId: block.id, pastPolicy: "end",
+  });
+  return check.ok ? { ok: true, block: { ...block, endMin } } : check;
 }
 
 export function materializePlan(input: MaterializeInput): MaterializeResult {
@@ -165,20 +287,14 @@ export function materializePlan(input: MaterializeInput): MaterializeResult {
       });
     }
 
-    if (stamp(gap.date, start) < nowStamp) {
-      reject(p.assignmentId, REASONS.IN_THE_PAST, `${gap.date} ${start}`);
-      continue;
-    }
-
-    if (stamp(gap.date, end) > stamp(assignment.dueDate, assignment.dueMin)) {
-      reject(p.assignmentId, REASONS.PAST_DEADLINE, `due ${assignment.dueDate}`);
-      continue;
-    }
-
-    // Defense in depth: the gap inventory should already guarantee this.
-    const blocked = blockedByDate.get(gap.date) ?? [];
-    if (blocked.some((iv) => overlaps({ startMin: start, endMin: end }, iv))) {
-      reject(p.assignmentId, REASONS.COLLIDES_WITH_OBLIGATION, `gap ${gap.id} overlapped an obligation`);
+    // The same predicate a hand-nudged block goes through, so the model path
+    // and the cadet's own edits are held to identical rules.
+    const verdict = checkPlacement({
+      date: gap.date, startMin: start, endMin: end, assignment,
+      ctx: { inventory, others: accepted, nowStamp },
+    });
+    if (!verdict.ok) {
+      reject(p.assignmentId, verdict.reason, verdict.detail);
       continue;
     }
 
@@ -191,6 +307,7 @@ export function materializePlan(input: MaterializeInput): MaterializeResult {
       endMin: end,
       rationale: p.rationale,
       locked: false,
+      done: false,
     });
   }
 
