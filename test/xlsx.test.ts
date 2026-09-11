@@ -43,7 +43,8 @@ async function buildMatrixWorkbook(): Promise<Buffer> {
   ws.getCell("B8").value = "CQ";
   ws.getCell("C8").value = "CQ";
 
-  return (await wb.xlsx.writeBuffer()) as Buffer;
+  // exceljs declares its own Buffer type; round-trip through unknown.
+  return Buffer.from((await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer);
 }
 
 describe("cellToText", () => {

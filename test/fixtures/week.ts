@@ -42,7 +42,7 @@ function ev(
 ): MatrixEvent {
   return {
     id, title, raw: title, date, startMin, endMin, kind, availability,
-    confidence: 0.95, confirmedByUser: false,
+    confidence: 0.95, confirmedByUser: false, ratcheted: false,
   };
 }
 export { ev };

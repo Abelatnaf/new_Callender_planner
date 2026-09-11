@@ -66,6 +66,8 @@ export const MatrixEventSchema = z.object({
   confidence: z.number().min(0).max(1),
   note: z.string().optional(),     // why the model classified it this way
   confirmedByUser: z.boolean().default(false),
+  /** True when the ratchet overrode the model and forced this to BLOCKED. */
+  ratcheted: z.boolean().default(false),
 });
 
 export const MatrixWeekSchema = z.object({
@@ -145,28 +147,55 @@ export const PlanSchema = z.object({
 
 /* ------------------------------------------- what we ask Gemini to return */
 
-/** Matrix parse: the model returns events without ids; we mint those. */
+/**
+ * The model-facing schemas deliberately differ from the internal ones.
+ *
+ * Gemini is asked for "HH:MM" and a weekday letter, never minutes-from-midnight
+ * and never a computed date. Every arithmetic step we can do exactly in code is
+ * taken away from the model, because a model that miscounts minutes produces a
+ * plan that looks authoritative and is wrong.
+ */
+const ClockTime = z
+  .string()
+  .regex(/^([01]?\d|2[0-3]):[0-5]\d$/, "expected HH:MM in 24-hour time");
+
 export const GeminiMatrixEventSchema = z.object({
-  title: z.string(),
-  raw: z.string(),
-  date: LocalDate,
-  startMin: Minute,
-  endMin: Minute,
+  title: z.string().describe("Short event name as a person would say it, e.g. BRC, Parade, CQ"),
+  raw: z.string().describe("The verbatim cell text this came from, for auditing"),
+  day: z.enum(["MO", "TU", "WE", "TH", "FR", "SA", "SU"]),
+  start: ClockTime,
+  end: ClockTime,
   kind: MatrixEventKindSchema,
   availability: AvailabilitySchema,
   confidence: z.number().min(0).max(1),
-  note: z.string().optional(),
+  note: z.string().optional().describe("Why this availability was chosen"),
 });
+
 export const GeminiMatrixResponseSchema = z.object({
-  weekStart: LocalDate,
+  weekStartDate: LocalDate.describe("The Monday of the week this Matrix covers"),
   events: z.array(GeminiMatrixEventSchema),
 });
 
+export const GeminiMeetingSchema = z.object({
+  days: z.array(z.enum(["SU", "MO", "TU", "WE", "TH", "FR", "SA"])).min(1),
+  start: ClockTime,
+  end: ClockTime,
+  location: z.string().optional(),
+});
+
+export const GeminiCourseSchema = z.object({
+  code: z.string().describe('Course code, e.g. "MATH 171"'),
+  title: z.string(),
+  instructor: z.string().optional(),
+  credits: z.number().optional(),
+  meetings: z.array(GeminiMeetingSchema),
+});
+
 export const GeminiTermResponseSchema = z.object({
-  name: z.string(),
+  name: z.string().describe('e.g. "Fall 2026"'),
   startDate: LocalDate,
   endDate: LocalDate,
-  courses: z.array(CourseSchema.omit({ id: true })),
+  courses: z.array(GeminiCourseSchema),
 });
 
 /**
@@ -176,17 +205,18 @@ export const GeminiTermResponseSchema = z.object({
  */
 export const GeminiPlacementSchema = z.object({
   assignmentId: z.string(),
-  gapId: z.string(),
-  offsetMin: z.number().int().min(0),
-  minutes: z.number().int().min(1),
-  rationale: z.string().optional(),
+  gapId: z.string().describe("Must be one of the gap ids listed in the prompt"),
+  offsetMin: z.number().int().min(0).describe("Minutes into that gap to begin"),
+  minutes: z.number().int().min(1).describe("How long this block should run"),
+  rationale: z.string().optional().describe("One short clause on why here"),
 });
+
 export const GeminiPlanResponseSchema = z.object({
   estimates: z.array(
     z.object({
       assignmentId: z.string(),
       estimateMinutes: z.number().int().min(0),
-      priority: z.number().int().min(1).max(5),
+      priority: z.number().int().min(1).max(5).describe("1 is most urgent"),
       kind: AssignmentKindSchema,
     }),
   ),
@@ -237,3 +267,5 @@ export type Vault = z.infer<typeof VaultSchema>;
 export type GeminiPlanResponse = z.infer<typeof GeminiPlanResponseSchema>;
 export type GeminiMatrixResponse = z.infer<typeof GeminiMatrixResponseSchema>;
 export type GeminiTermResponse = z.infer<typeof GeminiTermResponseSchema>;
+export type GeminiMatrixEvent = z.infer<typeof GeminiMatrixEventSchema>;
+export type GeminiCourse = z.infer<typeof GeminiCourseSchema>;
