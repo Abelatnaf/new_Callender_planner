@@ -144,7 +144,7 @@ export default function WeekPage() {
 
             {unconfirmed > 0 && (
               <div className="notice notice--signal no-print" style={{ marginTop: "var(--u-3)" }}>
-                <div className="notice__title">{unconfirmed} block{unconfirmed > 1 ? "s" : ""} need your eyes</div>
+                <div className="notice__title">{unconfirmed} block{unconfirmed > 1 ? "s" : ""} need{unconfirmed > 1 ? "" : "s"} your eyes</div>
                 Gemini was not confident about {unconfirmed === 1 ? "one entry" : "these entries"} in the Matrix,
                 so {unconfirmed === 1 ? "it was" : "they were"} marked mandatory to be safe — which means you may
                 have more free time than shown.{" "}

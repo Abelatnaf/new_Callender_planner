@@ -1,3 +1,4 @@
+@import "./fonts.css";
 @import "./tokens.css";
 @import "./ribbon.css";
 @import "./print.css";
@@ -131,6 +132,10 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 900; letter-spacing:
 .shell {
   display: grid;
   grid-template-rows: auto 1fr auto;
+  /* minmax(0, 1fr) is load-bearing: a grid column defaults to max-content, so
+     without it one wide descendant drags the whole page into horizontal scroll
+     and every inner overflow-x:auto is bypassed. */
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100dvh;
 }
 
@@ -139,6 +144,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 900; letter-spacing:
   max-width: 1500px;
   margin-inline: auto;
   padding-inline: var(--gutter);
+  min-width: 0;
 }
 
 .stack > * + * { margin-top: var(--u-2); }
@@ -147,6 +153,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 900; letter-spacing:
 .section {
   padding-block: var(--u-6);
   border-top: var(--rule) solid var(--rule-color);
+  min-width: 0;
 }
 .section:first-child { border-top: 0; }
 
@@ -175,6 +182,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 900; letter-spacing:
   justify-content: space-between;
   gap: var(--u-3);
   min-height: 58px;
+  min-width: 0;
 }
 
 .wordmark {
@@ -199,7 +207,9 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 900; letter-spacing:
   color: var(--ink-3);
 }
 
-.nav { display: flex; align-items: stretch; overflow-x: auto; scrollbar-width: none; }
+/* min-width:0 is load-bearing: without it this flex child refuses to shrink
+   below its content and pushes the whole page into horizontal scroll. */
+.nav { display: flex; align-items: stretch; overflow-x: auto; scrollbar-width: none; min-width: 0; }
 .nav::-webkit-scrollbar { display: none; }
 
 .nav a {
@@ -219,6 +229,15 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 900; letter-spacing:
 .nav a:last-child { border-right: var(--rule-hair) solid var(--rule-faint); }
 .nav a:hover { color: var(--ink); background: var(--paper-2); }
 .nav a[aria-current="page"] { color: var(--paper); background: var(--ink); }
+
+/* On a phone the masthead stacks: the wordmark keeps its line, the nav gets a
+   full-width row of its own to scroll in. */
+@media (max-width: 760px) {
+  .masthead__bar { flex-direction: column; align-items: stretch; gap: 0; }
+  .wordmark { padding-block: 10px; }
+  .nav { border-top: var(--rule-hair) solid var(--rule-faint); }
+  .nav a:first-child { border-left: 0; }
+}
 
 /* ================================================================ buttons */
 
@@ -297,7 +316,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 900; letter-spacing:
 .table tbody tr:hover { background: var(--paper-2); }
 .table .num-cell { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
 
 /* ================================================================ notices */
 

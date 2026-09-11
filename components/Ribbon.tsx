@@ -11,7 +11,7 @@
  * negotiate with a formation, and the interface should not imply otherwise.
  */
 import type { Assignment, Gap, MatrixEvent, WorkBlock } from "@/lib/schemas";
-import { type Axis, barsForDay, hourTicks, placement, toPct } from "@/lib/layout";
+import { type Axis, barDetail, barsForDay, hourTicks, placement, toPct } from "@/lib/layout";
 import { WEEKDAY_LONG, formatDuration, hhmm, shortDate, weekdayOf, type LocalDate } from "@/lib/time";
 
 export function RibbonScale({ axis, every = 2 }: { axis: Axis; every?: number }) {
@@ -95,7 +95,7 @@ export function Ribbon({
             <div
               key={g.id}
               className="gap"
-              style={pos}
+              style={{ left: pos.left, width: pos.width }}
               data-duration={formatDuration(g.minutes)}
               title={`${hhmm(g.startMin)}-${hhmm(g.endMin)} free${g.label ? ` (${g.label})` : ""}`}
             />
@@ -105,14 +105,15 @@ export function Ribbon({
         {bars.hatch.map((b) => {
           const pos = placement(b.startMin, b.endMin, axis);
           if (!pos) return null;
+          const detail = barDetail(pos.widthPct);
           return (
             <div
               key={b.key}
-              className={`bar bar--hatch${b.ai ? " bar--ai" : ""}`}
-              style={{ ...pos, ["--i" as string]: i++ }}
+              className={`bar bar--hatch${b.ai ? " bar--ai" : ""}${detail === "label" ? " bar--tight" : ""}`}
+              style={{ left: pos.left, width: pos.width, ["--i" as string]: i++ }}
               title={`${b.label} ${hhmm(b.startMin)}-${hhmm(b.endMin)} — yours, but confined`}
             >
-              <span className="bar__label">{b.label}</span>
+              {detail !== "none" && <span className="bar__label">{b.label}</span>}
             </div>
           );
         })}
@@ -120,15 +121,16 @@ export function Ribbon({
         {bars.ink.map((b) => {
           const pos = placement(b.startMin, b.endMin, axis);
           if (!pos) return null;
+          const detail = barDetail(pos.widthPct);
           return (
             <div
               key={b.key}
-              className={`bar bar--ink${b.ai ? " bar--ai" : ""}`}
-              style={{ ...pos, ["--i" as string]: i++ }}
+              className={`bar bar--ink${b.ai ? " bar--ai" : ""}${detail === "label" ? " bar--tight" : ""}`}
+              style={{ left: pos.left, width: pos.width, ["--i" as string]: i++ }}
               title={`${b.label} ${hhmm(b.startMin)}-${hhmm(b.endMin)} — mandatory`}
             >
-              <span className="bar__label">{b.label}</span>
-              <span className="bar__time">{hhmm(b.startMin)}</span>
+              {detail !== "none" && <span className="bar__label">{b.label}</span>}
+              {detail === "full" && <span className="bar__time">{hhmm(b.startMin)}</span>}
             </div>
           );
         })}
@@ -136,22 +138,26 @@ export function Ribbon({
         {bars.work.map((w) => {
           const pos = placement(w.block.startMin, w.block.endMin, axis);
           if (!pos) return null;
+          const detail = barDetail(pos.widthPct);
           const cls = [
             "bar", "bar--work",
             w.block.locked ? "is-locked" : "",
             w.urgent ? "is-urgent" : "",
+            detail === "label" ? "bar--tight" : "",
           ].filter(Boolean).join(" ");
           return (
             <button
               key={w.key}
               type="button"
               className={cls}
-              style={{ ...pos, ["--i" as string]: i++ }}
+              style={{ left: pos.left, width: pos.width, ["--i" as string]: i++ }}
               onClick={() => onSelectBlock?.(w.block)}
               title={`${w.label} ${hhmm(w.block.startMin)}-${hhmm(w.block.endMin)}${w.block.rationale ? ` — ${w.block.rationale}` : ""}`}
             >
-              <span className="bar__label">{w.label}</span>
-              <span className="bar__time">{formatDuration(w.block.endMin - w.block.startMin)}</span>
+              {detail !== "none" && <span className="bar__label">{w.label}</span>}
+              {detail === "full" && (
+                <span className="bar__time">{formatDuration(w.block.endMin - w.block.startMin)}</span>
+              )}
             </button>
           );
         })}

@@ -15,13 +15,27 @@ export function placement(
   startMin: number,
   endMin: number,
   axis: Axis,
-): { left: string; width: string } | null {
+): { left: string; width: string; widthPct: number } | null {
   const s = Math.max(startMin, axis.startMin);
   const e = Math.min(endMin, axis.endMin);
   if (e <= s) return null;
   const left = toPct(s, axis);
   const width = toPct(e, axis) - left;
-  return { left: `${left}%`, width: `${width}%` };
+  return { left: `${left}%`, width: `${width}%`, widthPct: width };
+}
+
+/**
+ * How much text a bar can honestly carry.
+ *
+ * A 50-minute class inside a 17-hour axis is a sliver. Squeezing "CHEM 141" and
+ * a start time into it produces "C... 0800", which is noise pretending to be
+ * information. Below these widths the bar says less, and means more - a solid
+ * black sliver already reads as "this time is taken".
+ */
+export function barDetail(widthPct: number): "none" | "label" | "full" {
+  if (widthPct < 2.6) return "none";
+  if (widthPct < 6) return "label";
+  return "full";
 }
 
 /** Hour ticks to label along the scale. */

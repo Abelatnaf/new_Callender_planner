@@ -72,6 +72,7 @@
   display: flex;
   align-items: center;
   padding-inline: 5px;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   font-size: var(--t-micro);
@@ -128,6 +129,12 @@
 }
 
 .bar__label { overflow: hidden; text-overflow: ellipsis; }
+
+/* A 50-minute class is a ~60px sliver. Tracking and padding are the difference
+   between "CHEM 141" and "CHEM ...", and the course code is the whole point of
+   the label, so narrow bars give up their breathing room to keep it whole. */
+.bar--tight { padding-inline: 2px; letter-spacing: 0; }
+.bar--tight .bar__label { font-size: 0.6875rem; }
 .bar__time { margin-left: auto; padding-left: 6px; opacity: 0.7; font-size: 0.625rem; }
 
 /* Below this width a label is a smear; the day pages carry the detail. */
@@ -226,7 +233,7 @@
 
 /* --- narrow screens ---------------------------------------------------- */
 
-.ribbon-board { --hour-w: 5.88%; }
+.ribbon-board { --hour-w: 5.88%; min-width: 0; max-width: 100%; }
 
 @media (max-width: 760px) {
   .ribbon-board { overflow-x: auto; }
