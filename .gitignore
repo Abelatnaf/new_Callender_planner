@@ -9,3 +9,4 @@ next-env.d.ts
 .vercel
 .DS_Store
 /test-output/
+/test-output/

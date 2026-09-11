@@ -54,8 +54,6 @@
   .masthead, .nav, .no-print, .btn, .ask-panel, .colophon,
   .dropzone, .toolbar, .ribbon__now { display: none !important; }
 
-  .print-only { display: revert !important; }
-
   .wrap { max-width: none; padding: 0; }
   .section { padding-block: 0; border: 0; }
 
@@ -104,6 +102,11 @@
 
   .bar--work { border-width: 0.75pt !important; }
 
+  /* At Letter width the ribbon track is under half its on-screen size, so a
+     50-minute class is ~28px and its label degrades to "MAT...". A solid sliver
+     already reads as "taken"; the day pages carry the detail. */
+  .bar--tight .bar__label { display: none; }
+
   /* A checkbox to tick as the day is worked. */
   .daypage__block { display: flex; gap: 8pt; align-items: flex-start; border-bottom: 0.5pt solid #999; padding-block: 5pt; }
   .daypage__check { width: 10pt; height: 10pt; border: 0.75pt solid #000; flex: none; margin-top: 1pt; }
@@ -130,7 +133,10 @@
   }
 }
 
-/* On screen the print-only elements stay out of the way entirely. */
+/* On screen the print-only elements stay out of the way entirely. Note this is
+   the ONLY display rule that touches .print-only: a print-side counterpart
+   using `display: revert` would resolve to the UA default and silently flatten
+   any flex or grid layout those elements rely on. */
 @media screen {
-  .print-only { display: none; }
+  .print-only { display: none !important; }
 }
