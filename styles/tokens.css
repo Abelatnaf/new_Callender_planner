@@ -1,186 +1,210 @@
 /* ===========================================================================
    ORDER — design tokens
 
-   Apple's system language: deep neutral grays, one vivid accent, generous
-   radii, and depth built from soft layered shadows rather than borders.
+   THE IDEA: your week is made of light.
 
-   The information design is unchanged — saturated means time taken from you,
-   tinted means time you hold but cannot leave, the accent is work you chose,
-   and empty is free. Only the surface changed.
+   Every calendar ever built draws the *events*. This one draws the gaps —
+   because the question the app exists to answer is "which hours are actually
+   mine?", and drawing the answer as empty space was backwards.
+
+   So: free time glows. Obligations are the void it is carved out of. And the
+   glow shifts hue with the hour, so the colour of your free time tells you
+   when it falls — a gold week has mornings, a violet week does not.
    =========================================================================== */
 
 :root {
-  /* --- neutrals: Apple's gray ramp -------------------------------------- */
-  --bg:            #f5f5f7;   /* the familiar off-white page */
-  --bg-elevated:   #ffffff;   /* cards and sheets sit above it */
-  --bg-sunken:     #ececee;   /* wells, tracks, inset areas */
-  --bg-hover:      #f0f0f2;
+  /* --- the void ---------------------------------------------------------- */
+  --void:          #07070a;   /* the canvas */
+  --void-2:        #0d0d12;   /* panels lifted off it */
+  --void-3:        #14141b;   /* inputs, wells */
+  --void-edge:     rgba(255, 255, 255, 0.07);
+  --void-edge-2:   rgba(255, 255, 255, 0.13);
 
-  --label:         #1d1d1f;   /* primary text — near-black, never pure */
-  --label-2:       #6e6e73;   /* secondary */
-  --label-3:       #86868b;   /* tertiary, captions */
-  --label-4:       #aeaeb2;   /* quaternary, placeholders */
+  /* Obligations: matte, inert, no glow. They absorb light rather than emit. */
+  --taken:         #16161d;
+  --taken-edge:    rgba(255, 255, 255, 0.06);
+  --on-taken:      #a8a8b4;   /* label sitting on the void, both themes */
 
-  --separator:     rgba(0, 0, 0, 0.08);
-  --separator-strong: rgba(0, 0, 0, 0.14);
+  /* --- text on black ----------------------------------------------------- */
+  /* Pure white is harsh on a true-black ground; this tops out just under it. */
+  --ink:           #f2f2f7;
+  --ink-2:         #a1a1ac;
+  --ink-3:         #8b8b97;   /* >= 4.5:1 on the void; carries real labels */
+  --ink-4:         #6a6a76;   /* >= 3:1; axis ticks and other decoration */
 
-  /* --- accents ---------------------------------------------------------- */
-  --blue:          #0071e3;   /* systemBlue — the single action colour */
-  --blue-hover:    #0077ed;
-  --blue-soft:     rgba(0, 113, 227, 0.10);
-  --blue-border:   rgba(0, 113, 227, 0.22);
+  /* --- LIGHT: the four times of day -------------------------------------- */
+  /* Each band has a core (the fill) and a glow (what it throws).            */
+  --dawn:          #ffb340;   /* 0600-1100  warm gold */
+  --dawn-2:        #ff8a3d;
+  --day:           #3ddced;   /* 1100-1600  cyan */
+  --day-2:         #2ba6f5;
+  --dusk:          #a56bff;   /* 1600-2000  violet */
+  --dusk-2:        #7b5cff;
+  --night:         #5a6bff;   /* 2000-2300  deep indigo */
+  --night-2:       #3f4fd8;
 
-  --red:           #ff3b30;   /* overdue, at risk */
-  --red-soft:      rgba(255, 59, 48, 0.10);
-  --orange:        #ff9500;
-  --green:         #34c759;
-  --purple:        #af52de;
-  --graphite:      #48484a;   /* obligations: present, heavy, not alarming */
-  --graphite-soft: rgba(72, 72, 74, 0.08);
+  /* --- per-course hues ---------------------------------------------------- */
+  /* Assigned stably from the course id so a course never changes colour. */
+  --c0: #ff9f4a;  --c1: #4ad8ff;  --c2: #b18cff;  --c3: #4affb8;
+  --c4: #ff6ba8;  --c5: #ffd84a;  --c6: #6e9bff;  --c7: #ff7a5c;
 
-  --on-accent:     #ffffff;
+  /* --- state -------------------------------------------------------------- */
+  --alert:         #ff4d5e;   /* overdue, at risk. Used nowhere decorative. */
+  --alert-glow:    rgba(255, 77, 94, 0.45);
+  --on-light:      #07070a;   /* text that sits on a glowing band */
 
-  /* --- materials -------------------------------------------------------- */
-  --material-thick: rgba(255, 255, 255, 0.82);
-  --blur:          saturate(180%) blur(20px);
+  /* --- glow: layered, hue-matched, never a generic drop shadow ------------ */
+  --bloom-sm: 0 0 10px -2px var(--glow, transparent);
+  --bloom:    0 0 22px -4px var(--glow, transparent), 0 0 60px -18px var(--glow, transparent);
+  --bloom-lg: 0 0 40px -6px var(--glow, transparent), 0 0 110px -24px var(--glow, transparent);
 
-  /* --- elevation: soft, layered, never harsh ---------------------------- */
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.03);
-  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.05);
-  --shadow-4: 0 24px 64px rgba(0, 0, 0, 0.16), 0 4px 16px rgba(0, 0, 0, 0.06);
-  --shadow-blue: 0 4px 14px rgba(0, 113, 227, 0.28);
+  /* Depth for panels, which sit *above* the void rather than glowing. */
+  --lift-1: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --lift-2: 0 8px 28px rgba(0, 0, 0, 0.55);
+  --lift-3: 0 24px 70px rgba(0, 0, 0, 0.7);
 
-  /* --- radii: generous, and consistent per element size ----------------- */
-  --r-xs:  6px;
-  --r-sm:  10px;
-  --r-md:  14px;
-  --r-lg:  18px;
-  --r-xl:  24px;
-  --r-2xl: 32px;
-  --r-pill: 980px;   /* Apple's own pill value */
+  --inset:  inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 
-  /* --- type ------------------------------------------------------------- */
-  /* Real SF Pro first: on Apple hardware nothing is downloaded at all. */
+  /* --- radii -------------------------------------------------------------- */
+  --r-xs: 5px;  --r-sm: 9px;  --r-md: 13px;  --r-lg: 18px;
+  --r-xl: 24px; --r-2xl: 34px; --r-pill: 980px;
+
+  /* --- type --------------------------------------------------------------- */
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
           "Inter", "Segoe UI", system-ui, sans-serif;
-  --font-num: var(--font);
 
-  --t-caption:  0.75rem;    /* 12 */
-  --t-footnote: 0.8125rem;  /* 13 */
-  --t-sub:      0.9375rem;  /* 15 */
-  --t-body:     1.0625rem;  /* 17 — Apple's body size */
-  --t-lg:       1.3125rem;  /* 21 */
+  --t-caption:  0.75rem;
+  --t-footnote: 0.8125rem;
+  --t-sub:      0.9375rem;
+  --t-body:     1.0625rem;
+  --t-lg:       1.3125rem;
   --t-title3:   1.5rem;
-  --t-title2:   clamp(1.75rem, 3vw, 2.125rem);
-  --t-title1:   clamp(2.25rem, 5vw, 3rem);
-  --t-hero:     clamp(2.75rem, 7vw, 4.5rem);
+  --t-title2:   clamp(1.75rem, 3vw, 2.25rem);
+  --t-title1:   clamp(2.25rem, 5vw, 3.25rem);
+  --t-hero:     clamp(3.5rem, 11vw, 8rem);
 
-  /* Large Apple type is tightly tracked; small type is not. */
-  --track-hero:  -0.025em;
-  --track-title: -0.021em;
+  --track-hero:  -0.04em;
+  --track-title: -0.024em;
   --track-body:  -0.011em;
 
-  /* --- spacing ---------------------------------------------------------- */
-  --s-1:  4px;
-  --s-2:  8px;
-  --s-3:  12px;
-  --s-4:  16px;
-  --s-5:  20px;
-  --s-6:  24px;
-  --s-8:  32px;
-  --s-10: 40px;
-  --s-12: 48px;
-  --s-16: 64px;
-  --s-20: 80px;
+  /* --- spacing ------------------------------------------------------------ */
+  --s-1: 4px;  --s-2: 8px;   --s-3: 12px;  --s-4: 16px;  --s-5: 20px;
+  --s-6: 24px; --s-8: 32px;  --s-10: 40px; --s-12: 48px; --s-16: 64px; --s-20: 80px;
 
-  --gutter: clamp(20px, 5vw, 48px);
-  --measure: 68ch;
+  --gutter: clamp(20px, 5vw, 52px);
+  --measure: 66ch;
 
-  /* --- motion: Apple's spring-ish easing --------------------------------- */
   --ease:        cubic-bezier(0.25, 0.1, 0.25, 1);
   --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 
-  /* --- ribbon ----------------------------------------------------------- */
-  --ribbon-h:       52px;
-  --ribbon-h-dense: 36px;
+  --ribbon-h:       58px;
+  --ribbon-h-dense: 38px;
 
-  color-scheme: light;
+  /* Legacy aliases, so markup written against the previous system still
+     resolves while it is migrated. */
+  --bg: var(--void);
+  --bg-elevated: var(--void-2);
+  --bg-sunken: var(--void-3);
+  --bg-hover: var(--void-3);
+  --label: var(--ink);
+  --label-2: var(--ink-2);
+  --label-3: var(--ink-3);
+  --label-4: var(--ink-4);
+  --separator: var(--void-edge);
+  --separator-strong: var(--void-edge-2);
+  --blue: var(--day-2);
+  --blue-hover: var(--day);
+  --blue-soft: rgba(61, 220, 237, 0.13);
+  --blue-border: rgba(61, 220, 237, 0.3);
+  --red: var(--alert);
+  --red-soft: rgba(255, 77, 94, 0.14);
+  --orange: var(--dawn);
+  --green: #4affb8;
+  --purple: var(--dusk);
+  --graphite: var(--taken);
+  --graphite-soft: rgba(255, 255, 255, 0.05);
+  --on-accent: var(--on-light);
+  --shadow-1: var(--lift-1);
+  --shadow-2: var(--lift-2);
+  --shadow-3: var(--lift-3);
+  --shadow-4: var(--lift-3);
+  --shadow-blue: 0 0 22px -6px rgba(61, 220, 237, 0.6);
+  --material-thick: rgba(10, 10, 14, 0.72);
+  --blur: saturate(160%) blur(22px);
+
+  color-scheme: dark;
 }
 
 /* ---------------------------------------------------------------------------
-   Dark mode is not an inversion — it is Apple's dark palette, where elevated
-   surfaces get *lighter* rather than darker, and the accent brightens to hold
-   contrast against a black ground.
+   LIGHT MODE — a genuine inversion, not a washed-out dark theme.
+
+   There is no glow on paper-white, so the logic flips instead of fading: free
+   time becomes saturated colour, obligations become solid graphite. The same
+   sentence, told with ink instead of light.
    --------------------------------------------------------------------------- */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg:            #000000;
-    --bg-elevated:   #1c1c1e;
-    --bg-sunken:     #141416;
-    --bg-hover:      #2c2c2e;
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --void:        #ffffff;
+    --void-2:      #f7f7fa;
+    --void-3:      #eeeef3;
+    --void-edge:   rgba(0, 0, 0, 0.09);
+    --void-edge-2: rgba(0, 0, 0, 0.16);
 
-    --label:         #f5f5f7;
-    --label-2:       #aeaeb2;
-    --label-3:       #8e8e93;
-    --label-4:       #636366;
+    --taken:       #2b2b33;
+    --taken-edge:  rgba(0, 0, 0, 0.1);
+    --on-taken:    rgba(255, 255, 255, 0.88);  /* the void is dark here too */
 
-    --separator:        rgba(255, 255, 255, 0.10);
-    --separator-strong: rgba(255, 255, 255, 0.18);
+    --ink:         #0c0c10;
+    --ink-2:       #55555f;
+    --ink-3:       #6d6d78;   /* >= 4.5:1 on white */
+    --ink-4:       #8a8a94;   /* >= 3:1 on white */
 
-    --blue:        #0a84ff;
-    --blue-hover:  #3b9bff;
-    --blue-soft:   rgba(10, 132, 255, 0.16);
-    --blue-border: rgba(10, 132, 255, 0.34);
+    /* Deepened so they hold against white rather than bleaching out. */
+    --dawn:  #f59300;  --dawn-2:  #e06a00;
+    --day:   #00a6c4;  --day-2:   #0077d4;
+    --dusk:  #7d3fe0;  --dusk-2:  #5b2fc9;
+    --night: #3a49d1;  --night-2: #2634a8;
 
-    --red:         #ff453a;
-    --red-soft:    rgba(255, 69, 58, 0.16);
-    --orange:      #ff9f0a;
-    --green:       #30d158;
-    --purple:      #bf5af2;
-    --graphite:    #48484a;
-    --graphite-soft: rgba(142, 142, 147, 0.16);
+    --c0: #e07800; --c1: #0090b8; --c2: #7a45d6; --c3: #009e63;
+    --c4: #d4356f; --c5: #b08a00; --c6: #3462d4; --c7: #d4452a;
 
-    --material-thick: rgba(28, 28, 30, 0.78);
+    --alert:      #d92035;
+    --alert-glow: rgba(217, 32, 53, 0.3);
+    --on-light:   #ffffff;
 
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.5);
-    --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.6);
-    --shadow-4: 0 24px 64px rgba(0, 0, 0, 0.7);
-    --shadow-blue: 0 4px 14px rgba(10, 132, 255, 0.4);
+    /* Glow becomes a soft tint rather than a light source. */
+    --bloom-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --bloom:    0 2px 10px rgba(0, 0, 0, 0.08);
+    --bloom-lg: 0 6px 26px rgba(0, 0, 0, 0.1);
+    --lift-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --lift-2: 0 6px 22px rgba(0, 0, 0, 0.09);
+    --lift-3: 0 20px 56px rgba(0, 0, 0, 0.14);
+    --inset: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 
-    color-scheme: dark;
+    --material-thick: rgba(255, 255, 255, 0.78);
+    color-scheme: light;
   }
 }
 
-:root[data-theme="dark"] {
-  --bg:            #000000;
-  --bg-elevated:   #1c1c1e;
-  --bg-sunken:     #141416;
-  --bg-hover:      #2c2c2e;
-  --label:         #f5f5f7;
-  --label-2:       #aeaeb2;
-  --label-3:       #8e8e93;
-  --label-4:       #636366;
-  --separator:        rgba(255, 255, 255, 0.10);
-  --separator-strong: rgba(255, 255, 255, 0.18);
-  --blue:        #0a84ff;
-  --blue-hover:  #3b9bff;
-  --blue-soft:   rgba(10, 132, 255, 0.16);
-  --blue-border: rgba(10, 132, 255, 0.34);
-  --red:         #ff453a;
-  --red-soft:    rgba(255, 69, 58, 0.16);
-  --orange:      #ff9f0a;
-  --green:       #30d158;
-  --purple:      #bf5af2;
-  --graphite:    #48484a;
-  --graphite-soft: rgba(142, 142, 147, 0.16);
-  --material-thick: rgba(28, 28, 30, 0.78);
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.5);
-  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.6);
-  --shadow-4: 0 24px 64px rgba(0, 0, 0, 0.7);
-  --shadow-blue: 0 4px 14px rgba(10, 132, 255, 0.4);
-  color-scheme: dark;
+:root[data-theme="light"] {
+  --void: #ffffff; --void-2: #f7f7fa; --void-3: #eeeef3;
+  --void-edge: rgba(0, 0, 0, 0.09); --void-edge-2: rgba(0, 0, 0, 0.16);
+  --taken: #2b2b33; --taken-edge: rgba(0, 0, 0, 0.1);
+  --on-taken: rgba(255, 255, 255, 0.88);
+  --ink: #0c0c10; --ink-2: #55555f; --ink-3: #6d6d78; --ink-4: #8a8a94;
+  --dawn: #f59300; --dawn-2: #e06a00; --day: #00a6c4; --day-2: #0077d4;
+  --dusk: #7d3fe0; --dusk-2: #5b2fc9; --night: #3a49d1; --night-2: #2634a8;
+  --c0: #e07800; --c1: #0090b8; --c2: #7a45d6; --c3: #009e63;
+  --c4: #d4356f; --c5: #b08a00; --c6: #3462d4; --c7: #d4452a;
+  --alert: #d92035; --alert-glow: rgba(217, 32, 53, 0.3); --on-light: #ffffff;
+  --bloom-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --bloom: 0 2px 10px rgba(0, 0, 0, 0.08);
+  --bloom-lg: 0 6px 26px rgba(0, 0, 0, 0.1);
+  --lift-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --lift-2: 0 6px 22px rgba(0, 0, 0, 0.09);
+  --lift-3: 0 20px 56px rgba(0, 0, 0, 0.14);
+  --inset: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --material-thick: rgba(255, 255, 255, 0.78);
+  color-scheme: light;
 }

@@ -25,8 +25,12 @@ html {
 }
 
 body {
-  background: var(--bg);
-  color: var(--label);
+  background: var(--void);
+  color: var(--ink);
+  background-image:
+    radial-gradient(80rem 40rem at 50% -18rem, rgba(90, 107, 255, 0.16), transparent 70%),
+    radial-gradient(50rem 28rem at 88% -6rem, rgba(165, 107, 255, 0.10), transparent 70%);
+  background-attachment: fixed;
   font-family: var(--font);
   font-size: var(--t-sub);
   line-height: 1.5;
@@ -140,9 +144,10 @@ h3 { font-size: var(--t-lg); font-weight: 650; }
 /* ================================================================== cards */
 
 .card {
-  background: var(--bg-elevated);
+  background: var(--void-2);
+  border: 1px solid var(--void-edge);
   border-radius: var(--r-xl);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--lift-2);
   padding: var(--s-6);
 }
 .card--flush { padding: 0; overflow: hidden; }
@@ -211,7 +216,7 @@ h3 { font-size: var(--t-lg); font-weight: 650; }
   transition: background 0.2s var(--ease), color 0.2s var(--ease);
 }
 .nav a:hover { color: var(--label); background: var(--bg-hover); }
-.nav a[aria-current="page"] { color: var(--label); background: var(--bg-sunken); font-weight: 600; }
+.nav a[aria-current="page"] { color: var(--void); background: var(--ink); font-weight: 650; }
 
 @media (max-width: 760px) {
   .masthead__bar { flex-direction: column; align-items: stretch; gap: 0; padding-block: var(--s-2); }
@@ -228,11 +233,10 @@ h3 { font-size: var(--t-lg); font-weight: 650; }
   gap: var(--s-2);
   padding: 9px 18px;
   min-height: 38px;
-  border: none;
+  border: 1px solid var(--void-edge-2);
   border-radius: var(--r-pill);
-  background: var(--bg-elevated);
-  color: var(--label);
-  box-shadow: var(--shadow-1);
+  background: var(--void-2);
+  color: var(--ink);
   font-size: var(--t-footnote);
   font-weight: 500;
   text-decoration: none;
@@ -240,17 +244,19 @@ h3 { font-size: var(--t-lg); font-weight: 650; }
   transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease),
               background 0.18s var(--ease), opacity 0.18s var(--ease);
 }
-.btn:hover:not(:disabled) { background: var(--bg-hover); box-shadow: var(--shadow-2); }
+.btn:hover:not(:disabled) { background: var(--void-3); border-color: var(--ink-4); }
 .btn:active:not(:disabled) { transform: scale(0.97); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn--solid {
-  background: var(--blue);
-  color: var(--on-accent);
-  box-shadow: var(--shadow-blue);
-  font-weight: 600;
+  background: linear-gradient(135deg, var(--day), var(--day-2));
+  color: var(--on-light);
+  border-color: transparent;
+  --glow: var(--day);
+  box-shadow: var(--bloom);
+  font-weight: 700;
 }
-.btn--solid:hover:not(:disabled) { background: var(--blue-hover); box-shadow: var(--shadow-blue); }
+.btn--solid:hover:not(:disabled) { filter: brightness(1.1); box-shadow: var(--bloom-lg); }
 
 .btn--signal { background: var(--red); color: #fff; font-weight: 600; }
 .btn--signal:hover:not(:disabled) { background: var(--red); opacity: 0.9; }
@@ -269,9 +275,9 @@ h3 { font-size: var(--t-lg); font-weight: 650; }
   width: 100%;
   padding: 10px 14px;
   min-height: 40px;
-  background: var(--bg-elevated);
-  color: var(--label);
-  border: 1px solid var(--separator);
+  background: var(--void-3);
+  color: var(--ink);
+  border: 1px solid var(--void-edge-2);
   border-radius: var(--r-sm);
   font-size: var(--t-sub);
   transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
@@ -292,7 +298,7 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); c
   display: inline-flex;
   padding: 2px;
   gap: 2px;
-  background: var(--bg-sunken);
+  background: var(--void-3);
   border-radius: var(--r-sm);
 }
 .seg button {
@@ -309,10 +315,9 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); c
 }
 .seg button:hover { color: var(--label); }
 .seg button[aria-pressed="true"] {
-  background: var(--bg-elevated);
-  color: var(--label);
-  font-weight: 600;
-  box-shadow: var(--shadow-1);
+  background: var(--ink);
+  color: var(--void);
+  font-weight: 700;
 }
 
 /* ================================================================= tables */
@@ -342,13 +347,13 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); c
 .notice {
   border-radius: var(--r-lg);
   padding: var(--s-4) var(--s-5);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-1);
+  background: var(--void-2);
+  border: 1px solid var(--void-edge);
   font-size: var(--t-sub);
   line-height: 1.5;
   color: var(--label-2);
 }
-.notice--signal { background: var(--red-soft); box-shadow: none; color: var(--label); }
+.notice--signal { background: var(--red-soft); border-color: rgba(255, 77, 94, 0.3); color: var(--ink); }
 .notice__title { font-size: var(--t-sub); font-weight: 600; color: var(--label); margin-bottom: 3px; }
 .notice a { color: var(--blue); text-decoration: none; font-weight: 500; }
 .notice a:hover { text-decoration: underline; }
@@ -364,10 +369,10 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); c
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: var(--bg-elevated);
+  background: var(--void-2);
+  border: 1px solid var(--void-edge);
   border-radius: var(--r-lg);
   padding: var(--s-5);
-  box-shadow: var(--shadow-1);
 }
 .tally__n {
   font-size: var(--t-title3);
@@ -392,8 +397,8 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); c
   content: "";
   width: 14px; height: 14px;
   border-radius: 50%;
-  border: 2px solid var(--separator-strong);
-  border-top-color: var(--blue);
+  border: 2px solid var(--void-edge-2);
+  border-top-color: var(--day);
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -416,17 +421,17 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); c
 /* =============================================================== dropzone */
 
 .dropzone {
-  border: 2px dashed var(--separator-strong);
+  border: 2px dashed var(--void-edge-2);
   border-radius: var(--r-xl);
   padding: var(--s-10) var(--s-5);
   text-align: center;
   cursor: pointer;
-  background: var(--bg-elevated);
+  background: var(--void-2);
   transition: border-color 0.2s var(--ease), background 0.2s var(--ease),
               transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease);
 }
-.dropzone:hover { border-color: var(--blue); background: var(--blue-soft); }
-.dropzone.is-over { border-color: var(--blue); background: var(--blue-soft); transform: scale(1.01); box-shadow: var(--shadow-2); }
+.dropzone:hover { border-color: var(--day); background: var(--void-3); }
+.dropzone.is-over { border-color: var(--day); background: var(--void-3); transform: scale(1.01); --glow: var(--day); box-shadow: var(--bloom); }
 .dropzone.is-loaded { border-style: solid; border-color: var(--separator); box-shadow: var(--shadow-1); }
 .dropzone__title { font-size: var(--t-lg); font-weight: 600; letter-spacing: var(--track-title); }
 .dropzone__hint { font-size: var(--t-footnote); color: var(--label-3); margin-top: 5px; }
@@ -461,7 +466,8 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); c
 
 .ask-panel {
   width: min(520px, 100%);
-  background: var(--bg-elevated);
+  background: var(--void-2);
+  border-left: 1px solid var(--void-edge);
   box-shadow: var(--shadow-4);
   display: grid;
   grid-template-rows: auto 1fr auto;
@@ -495,11 +501,11 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); c
   white-space: pre-wrap;
   padding: 10px 14px;
   border-radius: var(--r-lg);
-  background: var(--bg-sunken);
+  background: var(--void-3);
   max-width: 92%;
 }
 .turn--user { align-items: flex-end; }
-.turn--user .turn__text { background: var(--blue); color: var(--on-accent); border-bottom-right-radius: var(--r-xs); }
+.turn--user .turn__text { background: linear-gradient(135deg, var(--day), var(--day-2)); color: var(--on-light); border-bottom-right-radius: var(--r-xs); }
 .turn--model .turn__text { border-bottom-left-radius: var(--r-xs); }
 
 /* ------------------------------------------------------- entrance motion */
@@ -511,3 +517,105 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); c
     to   { opacity: 1; transform: none; }
   }
 }
+
+/* ===========================================================================
+   THE HERO
+
+   One claim, set large: this much of the week is yours. The numerals are
+   filled with the same time-of-day gradient the ribbon uses, so the headline
+   and the chart speak one language.
+   =========================================================================== */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: var(--s-8);
+  align-items: center;
+  padding: var(--s-10) 0 var(--s-8);
+}
+
+.hero__num {
+  font-size: var(--t-hero);
+  font-weight: 700;
+  letter-spacing: var(--track-hero);
+  line-height: 0.92;
+  background: linear-gradient(112deg, var(--dawn) 0%, var(--day) 38%, var(--dusk) 72%, var(--night) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* A fallback for engines that ignore background-clip on text. */
+  -webkit-text-fill-color: transparent;
+}
+
+.hero__cap {
+  margin-top: var(--s-3);
+  font-size: var(--t-body);
+  color: var(--ink-2);
+  letter-spacing: var(--track-body);
+}
+
+/* Seven bars: the shape of the week before you read a single label. */
+.hero__week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--s-2);
+  align-items: end;
+  height: 132px;
+}
+.hero__day { display: flex; flex-direction: column; align-items: center; gap: 7px; height: 100%; }
+.hero__bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.hero__bar {
+  width: 100%;
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, var(--lit-a), var(--lit-b));
+  box-shadow: var(--bloom-sm);
+  min-height: 3px;
+  transition: height 0.7s var(--ease-out);
+}
+.hero__daylabel { font-size: var(--t-caption); font-weight: 600; color: var(--ink-4); }
+.hero__daylabel.is-today { color: var(--ink); }
+
+.hero__stats {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--s-8);
+  flex-wrap: wrap;
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--void-edge);
+}
+/* dt and dd need an explicit column here: left to the dl's default flow inside
+   a flex row they overlapped and the labels rendered as garbled overstrike. */
+/* flex: 0 0 auto, NOT min-width: 0. The latter lets each stat shrink below its
+   own content, and with nowrap labels they then spilled over one another and
+   rendered as overstrike. min-width:0 is for scroll containers, not for content
+   that must keep its width. */
+.hero__stat { display: flex; flex-direction: column; flex: 0 0 auto; }
+.hero__stat dt {
+  font-size: var(--t-footnote);
+  color: var(--ink-3);
+  margin: 0 0 2px;
+  white-space: nowrap;
+}
+.hero__stat dd {
+  margin: 0;
+  font-size: var(--t-title3);
+  font-weight: 650;
+  letter-spacing: var(--track-title);
+  font-variant-numeric: tabular-nums;
+}
+.hero__stat dd.is-alert { color: var(--alert); }
+
+@media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; gap: var(--s-6); padding-top: var(--s-8); }
+  .hero__week { height: 104px; }
+  .hero__stats { gap: var(--s-6); }
+}
+
+/* The legend explains the inversion once, then gets out of the way. */
+.legend { display: flex; gap: var(--s-6); flex-wrap: wrap; align-items: center; padding-top: var(--s-4); }
+.legend__item { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--t-caption); color: var(--ink-3); }
+.legend__swatch { width: 26px; height: 13px; border-radius: 4px; flex: none; }
+.legend__swatch--lit { background: linear-gradient(135deg, var(--dawn), var(--day), var(--dusk)); }
+.legend__swatch--bound { background: linear-gradient(135deg, var(--dawn), var(--dusk)); filter: saturate(0.4) brightness(0.6); }
+.legend__swatch--void { background: var(--taken); box-shadow: inset 0 0 0 1px var(--taken-edge); }
+.legend__swatch--chip { background: var(--c1); }

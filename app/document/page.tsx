@@ -17,7 +17,7 @@ import { Ribbon, RibbonScale } from "@/components/Ribbon";
 import { useVault, planFor, weekFor } from "@/lib/store";
 import { buildWeekInventory, labeledMeetingsOn } from "@/lib/gaps";
 import { auditPlan } from "@/lib/validate";
-import { isOverdue, isUrgent } from "@/lib/layout";
+import { buildCourseHues, isOverdue, isUrgent } from "@/lib/layout";
 import {
   WEEKDAY_LONG, addDays, dateParts, formatDuration, hhmm, instantToLocal,
   shortDate, stamp, todayLocal, weekDates, weekStart, weekdayOf,
@@ -39,6 +39,11 @@ export default function DocumentPage() {
   const inventory = useMemo(
     () => buildWeekInventory(monday, v.term, events, v.settings),
     [monday, v.term, events, v.settings],
+  );
+
+  const hues = useMemo(
+    () => buildCourseHues((v.term?.courses ?? []).map((c) => c.code)),
+    [v.term],
   );
 
   const now = instantToLocal(new Date(), tz);
@@ -127,6 +132,7 @@ export default function DocumentPage() {
                 rowIndex={i}
                 dense
                 capacityMin={v.settings.dailyCapacityMin}
+                hues={hues}
               />
             ))}
           </div>
