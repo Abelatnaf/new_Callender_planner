@@ -33,14 +33,33 @@ export function AskPanel({
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const returnRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
+    if (!open) return;
+    // Remember what opened this so focus can go home on close.
+    returnRef.current = document.activeElement as HTMLElement | null;
+    inputRef.current?.focus();
+    return () => returnRef.current?.focus?.();
   }, [open]);
 
+  // Escape closes; Tab cycles inside the panel instead of wandering behind it.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    if (open) window.addEventListener("keydown", onKey);
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onClose(); return; }
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
@@ -109,6 +128,7 @@ export function AskPanel({
   return (
     <div className="ask-backdrop no-print" onClick={onClose}>
       <aside
+        ref={panelRef}
         className="ask-panel"
         role="dialog"
         aria-modal="true"
@@ -120,7 +140,7 @@ export function AskPanel({
           <button className="btn btn--sm btn--ghost" onClick={onClose}>Close ✕</button>
         </div>
 
-        <div className="ask-panel__body">
+        <div className="ask-panel__body" aria-live="polite" aria-atomic="false">
           {history.length === 0 && (
             <>
               <p className="muted" style={{ fontSize: "var(--t-footnote)", marginBottom: "var(--s-4)" }}>

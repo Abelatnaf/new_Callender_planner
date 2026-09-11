@@ -16,11 +16,12 @@ import { glowBand } from "@/lib/layout";
 import { WEEKDAY_LONG, formatDuration, weekdayOf } from "@/lib/time";
 
 export function Hero({
-  freeMinutes, takenMinutes, committedMinutes, overdue, days, today,
+  freeMinutes, takenMinutes, committedMinutes, doneMinutes = 0, overdue, days, today,
 }: {
   freeMinutes: number;
   takenMinutes: number;
   committedMinutes: number;
+  doneMinutes?: number;
   overdue: number;
   days: DayInventory[];
   today: string;
@@ -60,6 +61,7 @@ export function Hero({
       <dl className="hero__stats">
         <Stat label="Taken from you" value={formatDuration(takenMinutes)} />
         <Stat label="Work planned" value={formatDuration(committedMinutes)} />
+        <Stat label="Done" value={formatDuration(doneMinutes)} />
         <Stat label="Overdue" value={String(overdue)} alert={overdue > 0} />
       </dl>
     </section>

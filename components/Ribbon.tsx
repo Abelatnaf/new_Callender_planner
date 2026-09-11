@@ -156,7 +156,8 @@ export function Ribbon({
             "chip",
             `chip--h${hueFor(a?.courseCode, hues)}`,
             b.locked ? "is-locked" : "",
-            urgent ? "is-urgent" : "",
+            b.done ? "is-done" : "",
+            urgent && !b.done ? "is-urgent" : "",
             detail === "label" ? "chip--tight" : "",
           ].filter(Boolean).join(" ");
           return (
@@ -168,6 +169,7 @@ export function Ribbon({
               onClick={() => onSelectBlock?.(b)}
               title={`${label} ${hhmm(b.startMin)}–${hhmm(b.endMin)}${b.rationale ? ` — ${b.rationale}` : ""}`}
             >
+              {b.done && <span className="chip__tick" aria-hidden="true">✓</span>}
               {detail !== "none" && <span className="chip__label">{label}</span>}
               {detail === "full" && (
                 <span className="chip__time">{formatDuration(b.endMin - b.startMin)}</span>

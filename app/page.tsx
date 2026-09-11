@@ -16,13 +16,15 @@ import { KeyGate } from "@/components/KeyGate";
 import { keyHeaders } from "@/lib/apikey";
 import { Briefing } from "@/components/Briefing";
 import { Hero } from "@/components/Hero";
+import { BlockSheet } from "@/components/BlockSheet";
 import { useVault, planFor, weekFor, currentWeekStart } from "@/lib/store";
 import { buildWeekInventory, labeledMeetingsOn } from "@/lib/gaps";
+import { auditPlan } from "@/lib/validate";
 import { buildCourseHues, isOverdue } from "@/lib/layout";
 import {
   addDays, formatDuration, instantToLocal, shortDate, stamp, todayLocal, weekDates, weekStart,
 } from "@/lib/time";
-import type { Plan } from "@/lib/schemas";
+import type { Plan, WorkBlock } from "@/lib/schemas";
 
 export default function WeekPage() {
   const api = useVault();
@@ -31,6 +33,7 @@ export default function WeekPage() {
   const [planning, setPlanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [askOpen, setAskOpen] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
 
   const tz = vault.settings.timezone;
   const today = todayLocal(tz);
@@ -63,6 +66,22 @@ export default function WeekPage() {
   );
   const overdue = vault.assignments.filter((a) => isOverdue(a, nowStamp)).length;
   const unconfirmed = events.filter((e) => e.ratcheted || (!e.confirmedByUser && e.confidence < 0.75)).length;
+
+  const blocks = plan?.blocks ?? [];
+
+  const patchBlock = useCallback((next: WorkBlock) => {
+    if (!plan) return;
+    api.upsertPlan({ ...plan, blocks: plan.blocks.map((b) => (b.id === next.id ? next : b)) });
+  }, [api, plan]);
+
+  const removeBlock = useCallback((id: string) => {
+    if (!plan) return;
+    api.upsertPlan({ ...plan, blocks: plan.blocks.filter((b) => b.id !== id) });
+  }, [api, plan]);
+
+  // The plan can drift after it is made - the Matrix gets re-imported, a class
+  // moves. /document already checked this; the week page stayed silent.
+  const staleIssues = plan ? auditPlan(plan, inventory, vault.assignments) : [];
 
   const generate = useCallback(async () => {
     setPlanning(true);
@@ -135,12 +154,23 @@ export default function WeekPage() {
               freeMinutes={inventory.freeMinutes}
               takenMinutes={obligationMin}
               committedMinutes={committed}
+              doneMinutes={blocks.filter((b) => b.done).reduce((n, b) => n + (b.endMin - b.startMin), 0)}
               overdue={overdue}
               days={inventory.days}
               today={today}
             />
 
             <KeyGate />
+
+            {staleIssues.length > 0 && (
+              <div className="notice notice--signal no-print" style={{ marginTop: "var(--s-6)" }}>
+                <div className="notice__title">
+                  {staleIssues.length} block{staleIssues.length > 1 ? "s" : ""} no longer fit
+                </div>
+                Your schedule changed after this plan was made. Re-plan the week, or open the
+                affected blocks and move them.
+              </div>
+            )}
 
             {unconfirmed > 0 && (
               <div className="notice notice--signal no-print" style={{ marginTop: "var(--s-6)" }}>
@@ -179,6 +209,7 @@ export default function WeekPage() {
                     rowIndex={i}
                     capacityMin={vault.settings.dailyCapacityMin}
                     hues={hues}
+                    onSelectBlock={(b) => setSelected(b.id)}
                   />
                 ))}
               </div>
@@ -213,6 +244,23 @@ export default function WeekPage() {
       {plan && (
         <Briefing plan={plan} assignments={vault.assignments} />
       )}
+
+      {selected && plan && (() => {
+        const block = plan.blocks.find((b) => b.id === selected);
+        if (!block) return null;
+        return (
+          <BlockSheet
+            block={block}
+            assignment={vault.assignments.find((a) => a.id === block.assignmentId)}
+            siblings={plan.blocks.filter((b) => b.id !== block.id)}
+            inventory={inventory}
+            nowStamp={nowStamp}
+            onChange={patchBlock}
+            onRemove={removeBlock}
+            onClose={() => setSelected(null)}
+          />
+        );
+      })()}
 
       <AskPanel
         open={askOpen}

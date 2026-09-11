@@ -26,6 +26,11 @@ already placed into real free gaps and a written read on where the week bites.
 3. **`/`** — press *Plan this week*.
 4. **`/document`** — print it.
 
+Then, during the week: click any work block to tick it off, nudge it earlier or
+later, lengthen it, lock it so a re-plan leaves it alone, or remove it. Every
+edit goes through the same safety check the planner does, so a block you move by
+hand can no more land on a formation than one the model placed.
+
 ---
 
 ## How it decides things
@@ -219,7 +224,8 @@ schedule wants, and costs a fraction of the toner a glowing week would.
 - Canvas `.ics` must be re-exported and dropped in each week; there is no live
   feed (Canvas blocks direct browser fetches, and the manual path was the
   chosen trade).
-- Work blocks are placed by the planner; dragging them on the ribbon is not yet
-  wired up, though locked blocks are honoured across re-plans.
+- Work blocks are adjusted by nudging (±15 min) rather than dragging. Drag is
+  worse on every axis that matters here: unusable by keyboard, awkward on a
+  phone, and it invites a drop that then has to be silently rejected.
 - A block spanning the 0200 DST transition would be mis-measured. Nothing is
   scheduled at 0200, so this has not been handled.
