@@ -1,0 +1,119 @@
+/* ===========================================================================
+   ORDER — design tokens
+
+   One idea governs everything: INK IS OBLIGATION, WHITE SPACE IS FREEDOM.
+   Solid ink is time imposed on the cadet. Bare paper is time that is theirs.
+   Every colour, weight and rule in this file exists to keep that legible.
+
+   The palette is deliberately tiny. Vermilion is the ONLY chromatic colour and
+   it means exactly one thing: something is at risk. If it shows up anywhere
+   decorative, that is a bug, not a style choice.
+   =========================================================================== */
+
+:root {
+  /* --- substrate ------------------------------------------------------- */
+  --paper:        #f2efe7;   /* warm newsprint, not white */
+  --paper-2:      #eae6dc;   /* recessed panels, table stripes */
+  --paper-3:      #e0dbcf;   /* hatch ground */
+  --ink:          #0c0c0c;   /* near-black; true black is harsh on cream */
+  --ink-2:        #3d3a35;   /* secondary text */
+  --ink-3:        #6b665e;   /* tertiary, captions, axis labels */
+  --ink-4:        #a29c91;   /* hairlines at low emphasis */
+
+  /* --- the one accent -------------------------------------------------- */
+  --signal:       #d8321e;   /* overdue · at-risk · today. Nothing else. */
+  --signal-ink:   #ffffff;   /* text reversed out of signal */
+  --signal-wash:  #f6ded9;   /* the faintest signal tint, for row highlights */
+
+  /* --- rules: exactly three weights ------------------------------------ */
+  --rule-hair:    0.5px;
+  --rule:         1px;
+  --rule-heavy:   3px;
+  --rule-color:   var(--ink);
+  --rule-faint:   var(--ink-4);
+
+  /* --- type ------------------------------------------------------------ */
+  --font-display: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* A dramatic scale. Display sizes are meant to feel oversized on screen,
+     because on paper they are what you read from across a room. */
+  --t-micro:   0.6875rem;  /* 11px — axis ticks, legends */
+  --t-tiny:    0.75rem;    /* 12px — mono data, table cells */
+  --t-small:   0.8125rem;  /* 13px — body */
+  --t-base:    0.9375rem;  /* 15px — prose */
+  --t-lg:      1.25rem;
+  --t-xl:      1.75rem;
+  --t-2xl:     clamp(2rem, 4vw, 3rem);
+  --t-3xl:     clamp(2.75rem, 7vw, 5rem);
+  --t-4xl:     clamp(3.5rem, 12vw, 9rem);   /* day numerals */
+
+  --lead-tight:  0.92;
+  --lead-snug:   1.15;
+  --lead-normal: 1.5;
+
+  /* Display type at these sizes needs negative tracking or it reads loose. */
+  --track-display: -0.04em;
+  --track-tight:   -0.02em;
+  --track-caps:    0.14em;   /* small caps labels need the opposite */
+
+  /* --- spacing: an 8px baseline grid, and everything snaps to it -------- */
+  --u:    8px;
+  --u-2:  16px;
+  --u-3:  24px;
+  --u-4:  32px;
+  --u-5:  40px;
+  --u-6:  48px;
+  --u-8:  64px;
+  --u-10: 80px;
+  --u-12: 96px;
+
+  --gutter: clamp(16px, 4vw, 56px);
+  --measure: 62ch;           /* prose never runs wider than this */
+
+  /* --- the ribbon ------------------------------------------------------ */
+  --ribbon-h:       46px;
+  --ribbon-h-dense: 30px;
+  --hatch-angle:    45deg;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  color-scheme: light;
+}
+
+/* ---------------------------------------------------------------------------
+   Dark mode inverts the substrate but keeps the thesis: ink still means
+   obligation, it is simply light ink on a dark ground now. Vermilion does not
+   move, because a warning that changes colour between themes is not a warning.
+   Defined for the system default and again for the explicit toggle so both
+   directions win.
+   --------------------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:       #0b0b0c;
+    --paper-2:     #141416;
+    --paper-3:     #1c1c1f;
+    --ink:         #ece8e0;
+    --ink-2:       #b9b4ab;
+    --ink-3:       #858077;
+    --ink-4:       #4a4741;
+    --signal:      #ff4a33;
+    --signal-ink:  #0b0b0c;
+    --signal-wash: #2a1512;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:       #0b0b0c;
+  --paper-2:     #141416;
+  --paper-3:     #1c1c1f;
+  --ink:         #ece8e0;
+  --ink-2:       #b9b4ab;
+  --ink-3:       #858077;
+  --ink-4:       #4a4741;
+  --signal:      #ff4a33;
+  --signal-ink:  #0b0b0c;
+  --signal-wash: #2a1512;
+  color-scheme: dark;
+}

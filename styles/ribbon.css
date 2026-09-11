@@ -1,0 +1,235 @@
+/* ===========================================================================
+   THE RIBBON — the one component this whole application exists to draw.
+
+   A day is a horizontal strip of time. Four states, no legend needed:
+
+     solid ink      imposed on you        formation, class, duty
+     45° hatch      yours but confined    CQ, room-bound study
+     hairline box   you chose this        a placed work block
+     bare paper     free                  the thing we are actually selling
+
+   The cadet does not read a calendar and infer their free time. They see it,
+   as the white left on the page.
+   =========================================================================== */
+
+.ribbon-row {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  align-items: stretch;
+  border-top: var(--rule-hair) solid var(--rule-faint);
+}
+.ribbon-row:last-child { border-bottom: var(--rule-hair) solid var(--rule-faint); }
+.ribbon-row--today { background: linear-gradient(to right, var(--signal-wash), transparent 42%); }
+
+/* --- the day stub, left of the axis ----------------------------------- */
+
+.ribbon-stub {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--u) var(--u-2) var(--u) 0;
+  border-right: var(--rule) solid var(--ink);
+}
+.ribbon-stub__day {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.ribbon-stub__date {
+  font-size: var(--t-micro);
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  margin-top: 3px;
+}
+.ribbon-row--today .ribbon-stub__day { color: var(--signal); }
+
+/* --- the time axis ----------------------------------------------------- */
+
+.ribbon {
+  position: relative;
+  height: var(--ribbon-h);
+  margin-left: var(--u-2);
+  /* Hour ticks are painted into the ground, not added as elements. */
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--ink-4) 0 var(--rule-hair),
+    transparent var(--rule-hair) var(--hour-w, 5.88%)
+  );
+  background-position: left center;
+  overflow: hidden;
+}
+.ribbon--dense { height: var(--ribbon-h-dense); }
+
+/* --- bars -------------------------------------------------------------- */
+
+.bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-inline: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: var(--t-micro);
+  letter-spacing: 0.04em;
+  transform-origin: left center;
+}
+
+/* INK — time taken from you. */
+.bar--ink {
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+/* HATCH — yours, but you cannot leave the room. */
+.bar--hatch {
+  color: var(--ink-2);
+  text-transform: uppercase;
+  border-block: var(--rule-hair) solid var(--ink-4);
+  background-image: repeating-linear-gradient(
+    var(--hatch-angle),
+    var(--ink-4) 0 var(--rule-hair),
+    transparent var(--rule-hair) 6px
+  );
+}
+
+/* OUTLINE — time you chose to spend. The only bar you can move. */
+.bar--work {
+  background: var(--paper);
+  border: var(--rule) solid var(--ink);
+  color: var(--ink);
+  font-weight: 500;
+  cursor: grab;
+  transition: background 0.12s var(--ease), color 0.12s var(--ease);
+}
+.bar--work:hover { background: var(--ink); color: var(--paper); }
+.bar--work:active { cursor: grabbing; }
+.bar--work.is-locked { border-width: var(--rule-heavy); }
+
+/* A block whose deadline is inside 48 hours. */
+.bar--work.is-urgent { border-color: var(--signal); color: var(--signal); }
+.bar--work.is-urgent:hover { background: var(--signal); color: var(--signal-ink); }
+
+/* The tick that marks a classification the model made rather than the cadet.
+   Present so a wrong call is visible before it costs something. */
+.bar--ai::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: repeating-linear-gradient(to bottom, currentColor 0 2px, transparent 2px 4px);
+  opacity: 0.9;
+}
+
+.bar__label { overflow: hidden; text-overflow: ellipsis; }
+.bar__time { margin-left: auto; padding-left: 6px; opacity: 0.7; font-size: 0.625rem; }
+
+/* Below this width a label is a smear; the day pages carry the detail. */
+@media (max-width: 900px) {
+  .bar__time { display: none; }
+}
+
+/* --- free gaps: invisible until you ask -------------------------------- */
+
+.gap {
+  position: absolute;
+  top: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+.gap::after {
+  content: attr(data-duration);
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.625rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  opacity: 0;
+  transition: opacity 0.15s var(--ease);
+}
+.gap:hover::after { opacity: 1; }
+.gap:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+
+/* --- now line ---------------------------------------------------------- */
+
+.ribbon__now {
+  position: absolute;
+  top: -2px; bottom: -2px;
+  width: var(--rule);
+  background: var(--signal);
+  pointer-events: none;
+  z-index: 3;
+}
+.ribbon__now::before {
+  content: "";
+  position: absolute;
+  top: -1px; left: -2px;
+  width: 5px; height: 5px;
+  background: var(--signal);
+}
+
+/* --- the hour scale above the ribbons ---------------------------------- */
+
+.ribbon-scale {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  border-bottom: var(--rule) solid var(--ink);
+}
+.ribbon-scale__track { position: relative; height: 18px; margin-left: var(--u-2); }
+.ribbon-scale__tick {
+  position: absolute;
+  top: 0;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  transform: translateX(-50%);
+}
+.ribbon-scale__tick:first-child { transform: none; }
+
+/* --- load meter: one rule, length = committed minutes ------------------ */
+
+.meter {
+  position: relative;
+  height: 3px;
+  background: var(--paper-3);
+  margin-top: 5px;
+}
+.meter__fill { position: absolute; inset-block: 0; left: 0; background: var(--ink); }
+.meter__fill.is-over { background: var(--signal); }
+.meter__cap {
+  position: absolute;
+  top: -2px; bottom: -2px;
+  width: var(--rule);
+  background: var(--ink-3);
+}
+
+/* --- entrance: the week draws itself in, left to right ------------------ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .ribbon .bar {
+    animation: draw 0.42s var(--ease) both;
+    animation-delay: calc(var(--row, 0) * 55ms + var(--i, 0) * 14ms);
+  }
+  @keyframes draw {
+    from { transform: scaleX(0); opacity: 0; }
+    to   { transform: scaleX(1); opacity: 1; }
+  }
+}
+
+/* --- narrow screens ---------------------------------------------------- */
+
+.ribbon-board { --hour-w: 5.88%; }
+
+@media (max-width: 760px) {
+  .ribbon-board { overflow-x: auto; }
+  .ribbon-board__inner { min-width: 640px; }
+  .ribbon-row, .ribbon-scale { grid-template-columns: 62px 1fr; }
+}
