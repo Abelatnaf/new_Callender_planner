@@ -88,9 +88,34 @@ Import the repo, then set **`GEMINI_API_KEY`** in Project → Settings →
 Environment Variables. Nothing else is required. The key is read server-side
 only and never reaches the browser.
 
+`vercel.json` pins the framework to `nextjs`, so a project whose dashboard
+preset is wrong (or was set before this repo had any code in it) still builds
+correctly.
+
 Model ids default to the floating aliases `gemini-pro-latest` and
 `gemini-flash-latest` so a model retirement cannot break the tool. Pin them with
 `GEMINI_MODEL_PLAN` / `GEMINI_MODEL_PARSE` if you want a fixed version.
+
+### When the deployment misbehaves
+
+`GET /api/health` is the single check for all of this.
+
+**Every route returns a plain `404: NOT_FOUND`.** That is Vercel's own error
+page, not this app's — the app's 404 is ink on newsprint and says *No such
+page*. A plain one means nothing is being served, which almost always means the
+project's **Framework Preset is "Other"**: connect an empty repo to Vercel and
+it detects no framework, runs no build, and serves the bare repository root.
+The preset is sticky, so adding Next.js later does not revisit it.
+
+> Project → Settings → Build & Deployment → Framework Preset → **Next.js** →
+> Save, then Deployments → latest → ⋯ → **Redeploy**.
+
+**The site loads, but Matrix import, planning and Ask all fail with 503.**
+`GEMINI_API_KEY` is not set. Canvas `.ics` import keeps working throughout,
+because that parser is deterministic and never calls Gemini.
+
+**Key added, still 503.** Environment variables do not apply to builds that
+already ran. Redeploy.
 
 ---
 
