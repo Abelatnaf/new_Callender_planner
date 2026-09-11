@@ -83,6 +83,61 @@ export function keyOrigin(): string {
   }
 }
 
+/**
+ * Is this the right kind of credential at all?
+ *
+ * A Google account hands out several things that look like secrets, and only
+ * one of them works here. An AI Studio API key starts `AIza`; an OAuth token
+ * (`AQ.`, `ya29.`) or a signed JWT is a different animal entirely and the
+ * Generative Language API will simply refuse it. Recognising the common
+ * mistakes by name costs nothing and saves a round trip that comes back as a
+ * bare "rejected".
+ *
+ * Anything unrecognised is only flagged, never blocked: Google may mint a new
+ * format tomorrow, and a guess of mine should not be what locks someone out.
+ */
+export type KeyVerdict =
+  | { ok: true; warning?: string }
+  | { ok: false; reason: string };
+
+export function checkKeyShape(raw: string): KeyVerdict {
+  const key = raw.trim();
+  if (!key) return { ok: false, reason: "Paste a key first." };
+
+  if (/^AQ\./.test(key) || /^ya29\./.test(key)) {
+    return {
+      ok: false,
+      reason:
+        "That is a Google OAuth token, not a Gemini API key — they are different credentials " +
+        "and this one cannot call the Gemini API. An API key starts with AIza and comes from " +
+        "aistudio.google.com/apikey. Revoke this one: it is not what you want, and you have " +
+        "had it on your clipboard.",
+    };
+  }
+  if (/^ey[A-Za-z0-9_-]+\.ey/.test(key)) {
+    return {
+      ok: false,
+      reason:
+        "That is a signed token (a JWT), not a Gemini API key. Get one at " +
+        "aistudio.google.com/apikey — it starts with AIza.",
+    };
+  }
+  if (/\s/.test(key)) {
+    return { ok: false, reason: "That has a space in it — it was probably copied with something else." };
+  }
+  if (/^AIza/.test(key)) {
+    return key.length >= 35
+      ? { ok: true }
+      : { ok: false, reason: "That looks like the start of a key but it is too short — copy the whole thing." };
+  }
+  return {
+    ok: true,
+    warning:
+      "This does not look like an AI Studio key, which normally starts with AIza. Saved anyway — " +
+      "if requests come back rejected, that is why.",
+  };
+}
+
 /** Headers for a fetch to any Gemini-backed route. */
 export function keyHeaders(extra: Record<string, string> = {}): Record<string, string> {
   const k = readKey();

@@ -12,7 +12,7 @@
  * "keeps getting forgotten". Naming the host turns a mystery into a fact.
  */
 import { useState } from "react";
-import { useApiKey, useServerKey } from "@/lib/apikey";
+import { checkKeyShape, useApiKey, useServerKey } from "@/lib/apikey";
 
 export function KeyGate({ compact = false }: { compact?: boolean }) {
   const serverKey = useServerKey();
@@ -20,6 +20,24 @@ export function KeyGate({ compact = false }: { compact?: boolean }) {
   const [draft, setDraft] = useState("");
   const [saved, setSaved] = useState(false);
   const [why, setWhy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+
+  // Catch the credential that is the wrong kind entirely before spending a
+  // request on it. Google hands out several secrets; only one calls this API.
+  const submit = (value: string) => {
+    const verdict = checkKeyShape(value);
+    if (!verdict.ok) {
+      setProblem(verdict.reason);
+      setWarning(null);
+      return;
+    }
+    setProblem(null);
+    setWarning(verdict.warning ?? null);
+    setKey(value);
+    setDraft("");
+    setSaved(true);
+  };
 
   // Server has its own key, or we could not reach health: say nothing.
   if (serverKey !== false || !ready) return null;
@@ -73,7 +91,7 @@ export function KeyGate({ compact = false }: { compact?: boolean }) {
       </p>
       <form
         style={{ display: "flex", gap: "var(--s-2)", flexWrap: "wrap", alignItems: "center" }}
-        onSubmit={(e) => { e.preventDefault(); setKey(draft); setDraft(""); setSaved(true); }}
+        onSubmit={(e) => { e.preventDefault(); submit(draft); }}
       >
         <input
           className="input"
@@ -83,14 +101,25 @@ export function KeyGate({ compact = false }: { compact?: boolean }) {
           spellCheck={false}
           placeholder="Paste your Gemini API key"
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => { setDraft(e.target.value); setProblem(null); }}
           aria-label="Gemini API key"
+          aria-invalid={problem !== null}
+          aria-describedby={problem ? "key-problem" : undefined}
         />
         <button className="btn btn--solid" type="submit" disabled={!draft.trim()}>
           Save key
         </button>
-        {saved && <span className="label label--ink">Saved</span>}
+        {saved && !problem && <span className="label label--ink">Saved</span>}
       </form>
+
+      {problem && (
+        <p id="key-problem" role="alert" style={{ marginTop: "var(--s-2)", fontWeight: 600 }}>
+          {problem}
+        </p>
+      )}
+      {warning && !problem && (
+        <p style={{ marginTop: "var(--s-2)" }}>{warning}</p>
+      )}
       <p style={{ marginTop: "var(--s-2)" }}>
         <button className="btn btn--sm btn--ghost" aria-expanded={why} onClick={() => setWhy((w) => !w)}>
           {why ? "Hide" : "Tired of pasting this?"}
