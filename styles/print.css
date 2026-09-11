@@ -1,0 +1,142 @@
+/* ===========================================================================
+   PRINT
+
+   This design is print-native, so this file is not a rescue operation - it is
+   the same design at a different size. The only real work here is forcing the
+   light palette, making the browser actually lay down the ink (it refuses to
+   print backgrounds unless told), and controlling page breaks.
+   =========================================================================== */
+
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 14mm;
+  }
+
+  /* Solid ink bars ARE the design. Without this the browser helpfully drops
+     every background and prints a page of empty outlines. */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Paper is paper now. Force the light palette regardless of the viewer's
+     theme - a dark-mode printout is a black rectangle. */
+  :root, :root[data-theme="dark"] {
+    --paper: #ffffff;
+    --paper-2: #f4f2ed;
+    --paper-3: #e8e5dd;
+    --ink: #000000;
+    --ink-2: #333333;
+    --ink-3: #555555;
+    --ink-4: #999999;
+    --signal: #c0281a;
+    --signal-ink: #ffffff;
+    --signal-wash: #f7e6e3;
+    --ribbon-h: 30px;
+    --t-micro: 7pt;
+    --t-tiny: 8pt;
+    --t-small: 9pt;
+    --t-base: 9.5pt;
+    color-scheme: light;
+  }
+
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 9pt;
+  }
+
+  /* The paper grain is a screen affectation; real paper has its own. */
+  body::before { display: none !important; }
+
+  /* Everything that is chrome rather than content. */
+  .masthead, .nav, .no-print, .btn, .ask-panel, .colophon,
+  .dropzone, .toolbar, .ribbon__now { display: none !important; }
+
+  .wrap { max-width: none; padding: 0; }
+  .section { padding-block: 0; border: 0; }
+
+  a { text-decoration: none; color: inherit; }
+  a[href^="http"]::after { content: ""; }  /* no URL litter on a schedule */
+
+  /* ------------------------------------------------------------- pages */
+
+  .sheet {
+    break-after: page;
+    page-break-after: always;
+  }
+  .sheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .sheet__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2pt solid #000;
+    padding-bottom: 4pt;
+    margin-bottom: 10pt;
+  }
+  .sheet__title { font-family: var(--font-display); font-weight: 900; font-size: 16pt; letter-spacing: -0.03em; text-transform: uppercase; }
+  .sheet__meta { font-family: var(--font-mono); font-size: 7pt; letter-spacing: 0.12em; text-transform: uppercase; }
+
+  /* Never split a day, a block or a table row across two sheets. */
+  .ribbon-row, .bar, .daypage__block, tr, .notice, .avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  thead { display: table-header-group; }
+
+  .ribbon-board { overflow: visible !important; }
+  .ribbon-board__inner { min-width: 0 !important; }
+
+  /* Hatch needs to survive halftoning; tighten it so it does not read grey. */
+  .bar--hatch {
+    background-image: repeating-linear-gradient(
+      45deg, #000 0 0.4pt, transparent 0.4pt 3.5pt
+    ) !important;
+  }
+
+  .bar--work { border-width: 0.75pt !important; }
+
+  /* At Letter width the ribbon track is under half its on-screen size, so a
+     50-minute class is ~28px and its label degrades to "MAT...". A solid sliver
+     already reads as "taken"; the day pages carry the detail. */
+  .bar--tight .bar__label { display: none; }
+
+  /* A checkbox to tick as the day is worked. */
+  .daypage__block { display: flex; gap: 8pt; align-items: flex-start; border-bottom: 0.5pt solid #999; padding-block: 5pt; }
+  .daypage__check { width: 10pt; height: 10pt; border: 0.75pt solid #000; flex: none; margin-top: 1pt; }
+
+  /* Ruled space to write in. The paper has to be usable, not just readable. */
+  .notes-rules {
+    background-image: repeating-linear-gradient(
+      to bottom, transparent 0 15pt, #cccccc 15pt 15.4pt
+    );
+  }
+
+  .print-footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    font-family: var(--font-mono);
+    font-size: 6.5pt;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #555;
+    border-top: 0.4pt solid #999;
+    padding-top: 3pt;
+    display: flex;
+    justify-content: space-between;
+  }
+}
+
+/* On screen the print-only elements stay out of the way entirely. Note this is
+   the ONLY display rule that touches .print-only: a print-side counterpart
+   using `display: revert` would resolve to the UA default and silently flatten
+   any flex or grid layout those elements rely on. */
+@media screen {
+  .print-only { display: none !important; }
+}
