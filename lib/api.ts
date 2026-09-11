@@ -1,5 +1,5 @@
 /** Shared response helpers so every route fails the same, legible way. */
-import { MissingKeyError, ModelError } from "./gemini";
+import { MissingKeyError, ModelError, QuotaError } from "./gemini";
 
 export type ApiError = { error: string; kind: string; detail?: string };
 
@@ -26,6 +26,25 @@ export function fail(message: string, status: number, kind = "error", detail?: s
 export function handleError(err: unknown): Response {
   if (err instanceof MissingKeyError) {
     return fail(err.message, 503, "missing_key");
+  }
+
+  // Every model in the chain refused. Say which, and why that is usually not
+  // what it sounds like: the daily allowance is rarely spent by one upload.
+  // Far more often the key simply has no free-tier allowance on the newest
+  // models, and the advice that helps is "check the quota page", not "wait".
+  if (err instanceof QuotaError) {
+    const wait = err.retryAfterSec;
+    return fail(
+      wait !== null
+        ? `Gemini asked for ${wait} more second${wait === 1 ? "" : "s"} before the next request. ` +
+            "Try again in a moment - nothing was lost."
+        : "Your Gemini key has no allowance left on any model this app can use. " +
+            "Free keys are often capped per day; check yours at aistudio.google.com/apikey, " +
+            "or wait for the daily reset.",
+      429,
+      "rate_limit",
+      `Tried: ${err.tried.join(", ")}.`,
+    );
   }
 
   const message = err instanceof Error ? err.message : String(err);

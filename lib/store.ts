@@ -17,8 +17,27 @@ import {
   type Vault, VaultSchema,
 } from "./schemas";
 import { weekStart, todayLocal } from "./time";
+import { readKey, writeKey } from "./apikey";
 
 const KEY = "order.vault.v1";
+
+/**
+ * The JSON an export writes.
+ *
+ * The key rides alongside the vault rather than inside it, so VaultSchema stays
+ * the single description of what vault state is and a carried key can never
+ * leak into it.
+ */
+export function vaultExportPayload(vault: Vault, key: string): Record<string, unknown> {
+  return key.trim() ? { ...vault, geminiKey: key.trim() } : { ...vault };
+}
+
+/** The key an import file carries, if its author ticked the box. */
+export function carriedKey(raw: unknown): string | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = (raw as { geminiKey?: unknown }).geminiKey;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
 
 export function emptyVault(): Vault {
   return VaultSchema.parse({ version: 1, settings: {} });
@@ -65,8 +84,8 @@ export type VaultApi = {
   upsertMatrixWeek: (w: MatrixWeek) => void;
   upsertPlan: (p: Plan) => void;
   reset: () => void;
-  exportVault: () => void;
-  importVault: (file: File) => Promise<{ ok: boolean; error?: string }>;
+  exportVault: (opts?: { includeKey?: boolean }) => void;
+  importVault: (file: File) => Promise<{ ok: boolean; error?: string; keyRestored?: boolean }>;
 };
 
 export function useVault(): VaultApi {
@@ -124,8 +143,17 @@ export function useVault(): VaultApi {
 
   const reset = useCallback(() => update(() => emptyVault()), [update]);
 
-  const exportVault = useCallback(() => {
-    const blob = new Blob([JSON.stringify(vault, null, 2)], { type: "application/json" });
+  /**
+   * The whole vault as one file.
+   *
+   * The Gemini key is left out by default - a downloadable JSON that quietly
+   * contains an API key is a bad surprise. Including it is a deliberate tick,
+   * and it is what makes moving to a new browser, device or deployment URL a
+   * single import rather than a hunt for the key all over again.
+   */
+  const exportVault = useCallback((opts?: { includeKey?: boolean }) => {
+    const payload = vaultExportPayload(vault, opts?.includeKey ? readKey() : "");
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -136,12 +164,19 @@ export function useVault(): VaultApi {
 
   const importVault = useCallback(async (file: File) => {
     try {
-      const parsed = VaultSchema.safeParse(JSON.parse(await file.text()));
+      const raw: unknown = JSON.parse(await file.text());
+      const parsed = VaultSchema.safeParse(raw);
       if (!parsed.success) {
         return { ok: false, error: "That file is not an ORDER vault export." };
       }
       update(() => parsed.data);
-      return { ok: true };
+
+      // Carried only if the export was ticked to include it. VaultSchema strips
+      // the field, so it is read off the raw JSON before parsing throws it away.
+      const carried = carriedKey(raw);
+      if (carried) writeKey(carried);
+
+      return { ok: true, keyRestored: carried !== null };
     } catch {
       return { ok: false, error: "That file could not be read as JSON." };
     }

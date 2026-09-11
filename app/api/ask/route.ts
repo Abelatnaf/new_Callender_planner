@@ -8,7 +8,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { callerKey, fail, handleError } from "@/lib/api";
-import { MODELS, streamText } from "@/lib/gemini";
+import { MODEL_CHAINS, streamText } from "@/lib/gemini";
 import { ASK_SYSTEM } from "@/lib/prompts";
 import {
   AssignmentSchema, MatrixEventSchema, PlanSchema, SettingsSchema, TermSchema,
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     ].join("\n");
 
     const stream = await streamText({
-      model: MODELS.plan,
+      models: MODEL_CHAINS.plan,
       system: `${ASK_SYSTEM}\n\n--- THE CADET'S ACTUAL WEEK ---\n${ground}`,
       history: [...history, { role: "user" as const, text: question }],
       apiKey: callerKey(request),

@@ -13,7 +13,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { callerKey, fail, handleError } from "@/lib/api";
-import { MODELS, generateStructured } from "@/lib/gemini";
+import { MODEL_CHAINS, generateStructured } from "@/lib/gemini";
 import { PLAN_SYSTEM } from "@/lib/prompts";
 import {
   AssignmentSchema, GeminiPlanResponseSchema, MatrixEventSchema,
@@ -99,8 +99,8 @@ export async function POST(request: NextRequest) {
       }),
     ].filter(Boolean).join("\n");
 
-    const response = await generateStructured({
-      model: MODELS.plan,
+    const { value: response, model, fellBack } = await generateStructured({
+      models: MODEL_CHAINS.plan,
       system: PLAN_SYSTEM,
       parts: [{ text: prompt }],
       schema: GeminiPlanResponseSchema,
@@ -119,14 +119,16 @@ export async function POST(request: NextRequest) {
 
     return Response.json({
       plan,
-      issues,
+      issues: fellBack
+        ? [...issues, `Planned by ${model} - the preferred model was out of quota for this key.`]
+        : issues,
       assignments: applyEstimates(assignments, estimates),
       inventory: {
         weekStart: inventory.weekStart,
         freeMinutes: inventory.freeMinutes,
         gapCount: inventory.gaps.length,
       },
-      model: MODELS.plan,
+      model,
     });
   } catch (err) {
     return handleError(err);

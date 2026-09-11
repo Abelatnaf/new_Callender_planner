@@ -2,6 +2,17 @@
 
 import { useCallback, useId, useRef, useState } from "react";
 
+/**
+ * Every type the app can read, for a box that takes anything.
+ *
+ * The file picker's filter is a convenience, not a gate: routing is decided by
+ * reading the file (lib/detect.ts), so a box that narrows this list can only
+ * grey out a file the app would have handled perfectly well.
+ */
+export const ANY_FILE =
+  ".ics,.csv,.tsv,.xlsx,.xls,.xlsm,.pdf,.png,.jpg,.jpeg,.webp,.heic,.txt," +
+  "text/calendar,text/csv,text/plain,application/pdf,image/png,image/jpeg,image/webp";
+
 export function Dropzone({
   title, hint, accept, busy, loaded, onFile,
 }: {

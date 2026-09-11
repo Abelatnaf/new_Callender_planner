@@ -7,8 +7,8 @@
  * lib/convert.ts decides how much of that interpretation to trust.
  */
 import { NextRequest } from "next/server";
-import { callerKey, fail, handleError, isCsv, isPdf, isSpreadsheet, readUpload } from "@/lib/api";
-import { MODELS, generateStructured } from "@/lib/gemini";
+import { callerKey, fail, handleError, imageMime, isCsv, isImage, isPdf, isSpreadsheet, readUpload } from "@/lib/api";
+import { MODEL_CHAINS, generateStructured } from "@/lib/gemini";
 import { matrixSystem } from "@/lib/prompts";
 import { CadetSchema, GeminiMatrixResponseSchema } from "@/lib/schemas";
 import { toMatrixWeek } from "@/lib/convert";
@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
 
     if (!upload) return fail("No file was uploaded.", 400, "no_file");
 
-    let gridText: string;
     const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
     if (isCsv(upload.name, upload.type)) {
@@ -40,19 +39,25 @@ export async function POST(request: NextRequest) {
       // fill-right residue. renderWorkbookForModel trims that before sending.
       const wb = readCsv(upload.bytes.toString("utf8"), upload.name);
       if (wb.sheets.length === 0) return fail("That CSV appears to be empty.", 422, "empty_file");
-      gridText = renderWorkbookForModel(wb);
-      parts.push({ text: gridText });
+      parts.push({ text: renderWorkbookForModel(wb) });
     } else if (isSpreadsheet(upload.name, upload.type)) {
       const wb = await readWorkbook(upload.bytes, upload.name);
       if (wb.sheets.length === 0) {
         return fail("That workbook has no readable sheets.", 422, "empty_workbook");
       }
-      gridText = renderWorkbookForModel(wb);
-      parts.push({ text: gridText });
+      parts.push({ text: renderWorkbookForModel(wb) });
     } else if (isPdf(upload.name, upload.type)) {
       // Gemini reads PDFs natively; hand it the file rather than OCR-ing badly.
       parts.push({
         inlineData: { mimeType: "application/pdf", data: upload.bytes.toString("base64") },
+      });
+    } else if (isImage(upload.name, upload.type)) {
+      // A screenshot of the Matrix, which is how it reaches a phone.
+      parts.push({
+        inlineData: {
+          mimeType: imageMime(upload.name, upload.type),
+          data: upload.bytes.toString("base64"),
+        },
       });
     } else {
       const text = upload.bytes.toString("utf8");
@@ -73,8 +78,8 @@ export async function POST(request: NextRequest) {
       ].join("\n"),
     });
 
-    const response = await generateStructured({
-      model: MODELS.parse,
+    const { value: response, model, fellBack } = await generateStructured({
+      models: MODEL_CHAINS.parse,
       system: matrixSystem(cadet),
       parts,
       schema: GeminiMatrixResponseSchema,
@@ -89,8 +94,10 @@ export async function POST(request: NextRequest) {
       ratchetedCount: conversion.ratchetedCount,
       notMine: conversion.week.events.filter((e) => e.appliesToMe === false).length,
       lowConfidence: conversion.lowConfidence.map((e) => e.id),
-      warnings: conversion.warnings,
-      model: MODELS.parse,
+      warnings: fellBack
+        ? [...conversion.warnings, `Read by ${model} - the preferred model was out of quota for this key.`]
+        : conversion.warnings,
+      model,
     });
   } catch (err) {
     return handleError(err);
