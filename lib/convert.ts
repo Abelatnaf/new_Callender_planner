@@ -23,10 +23,23 @@ export const CONFIDENCE_FLOOR = 0.75;
 export function applyRatchet(
   availability: Availability,
   confidence: number,
-): { availability: Availability; ratcheted: boolean } {
-  if (availability === "BLOCKED") return { availability, ratcheted: false };
-  if (confidence < CONFIDENCE_FLOOR) return { availability: "BLOCKED", ratcheted: true };
-  return { availability, ratcheted: false };
+  appliesToMe = true,
+): { availability: Availability; appliesToMe: boolean; ratcheted: boolean } {
+  // Unsure cuts the same way on both axes: if you might have to be there,
+  // assume you do. Being wrongly told you are busy costs study time; being
+  // wrongly told you are free costs a formation.
+  const unsure = confidence < CONFIDENCE_FLOOR;
+  const nextAvailability = unsure && availability !== "BLOCKED" ? "BLOCKED" : availability;
+  const nextApplies = unsure ? true : appliesToMe;
+
+  // `ratcheted` means the code overrode the model, so it is only true when
+  // something actually changed. An already-BLOCKED row the model was unsure
+  // about was not overridden by anyone.
+  return {
+    availability: nextAvailability,
+    appliesToMe: nextApplies,
+    ratcheted: nextAvailability !== availability || nextApplies !== appliesToMe,
+  };
 }
 
 const DAY_INDEX: Record<string, number> = { MO: 0, TU: 1, WE: 2, TH: 3, FR: 4, SA: 5, SU: 6 };
@@ -90,7 +103,9 @@ export function toMatrixWeek(
       continue;
     }
 
-    const { availability, ratcheted } = applyRatchet(raw.availability, raw.confidence);
+    const { availability, appliesToMe, ratcheted } = applyRatchet(
+      raw.availability, raw.confidence, raw.appliesToMe,
+    );
     if (ratcheted) ratchetedCount++;
 
     events.push({
@@ -102,6 +117,8 @@ export function toMatrixWeek(
       endMin,
       kind: raw.kind,
       availability,
+      pax: raw.pax ?? "",
+      appliesToMe,
       confidence: raw.confidence,
       note: raw.note,
       confirmedByUser: false,

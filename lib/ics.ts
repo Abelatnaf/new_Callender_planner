@@ -166,14 +166,33 @@ const first = (e: RawEvent, name: string): Prop | undefined => e[name]?.[0];
 export function splitSummary(summary: string): { title: string; courseCode?: string } {
   const m = /^(.*?)\s*\[([^\]]+)\]\s*$/.exec(summary.trim());
   if (!m) return { title: summary.trim() };
+  // A bracket that is not a course code is part of the title, not a course.
+  if (!looksLikeCourseCode(m[2])) return { title: summary.trim() };
   return { title: m[1].trim(), courseCode: normalizeCourseCode(m[2]) };
 }
 
-/** "MATH-171-01" -> "MATH 171"; leaves anything unrecognized alone. */
+/**
+ * "MATH-171-01" -> "MATH 171", "CIS-111L-03 and 04" -> "CIS 111L".
+ *
+ * The trailing letter is load-bearing: CIS 111L is the lab and CIS 111 is the
+ * lecture, they meet at different times, and dropping the L silently merged two
+ * real courses into one.
+ */
 export function normalizeCourseCode(raw: string): string {
   const cleaned = raw.trim();
-  const m = /^([A-Za-z]{2,6})[-_\s]*(\d{2,4})/.exec(cleaned);
-  return m ? `${m[1].toUpperCase()} ${m[2]}` : cleaned;
+  const m = /^([A-Za-z]{2,6})[-_\s]*(\d{2,4})([A-Za-z]?)/.exec(cleaned);
+  return m ? `${m[1].toUpperCase()} ${m[2]}${m[3].toUpperCase()}` : cleaned;
+}
+
+/**
+ * Does this bracket hold a course code at all?
+ *
+ * Canvas also brackets things like "Core Competency Module (Class 27+3)", which
+ * is a title. Accepting it as a course code puts a phantom course in the
+ * backlog and gives it a colour of its own.
+ */
+export function looksLikeCourseCode(raw: string): boolean {
+  return /^[A-Za-z]{2,6}[-_\s]*\d{2,4}[A-Za-z]?\b/.test(raw.trim());
 }
 
 const KIND_PATTERNS: Array<[RegExp, AssignmentKind]> = [

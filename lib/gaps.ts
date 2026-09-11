@@ -88,16 +88,19 @@ export function buildDayInventory(
 
   const todays = events.filter((e) => e.date === date);
 
+  // Only this cadet's own obligations take time. The Matrix lists the whole
+  // Corps' week, and a row scoped to Band or to another company is real but not
+  // theirs - counting it would erase the week under other people's duties.
   const blocked = normalize([
     ...meetingsOn(term, date),
-    ...todays.filter((e) => e.availability === "BLOCKED"),
+    ...todays.filter((e) => e.availability === "BLOCKED" && e.appliesToMe !== false),
   ]);
 
   const free = subtract(dayWindow, blocked);
 
   // PARTIAL events mark free time as room-bound. Split gaps on those edges so
   // every gap carries one honest quality label.
-  const partials = todays.filter((e) => e.availability === "PARTIAL");
+  const partials = todays.filter((e) => e.availability === "PARTIAL" && e.appliesToMe !== false);
   const roomBound = normalize(partials);
 
   const segments: Array<Interval & { quality: Gap["quality"]; label?: string }> = [];

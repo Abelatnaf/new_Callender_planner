@@ -7,12 +7,13 @@
  * seconds of correction, not a term of bad plans.
  */
 import { NextRequest } from "next/server";
-import { callerKey, fail, handleError, isPdf, isSpreadsheet, readUpload } from "@/lib/api";
+import { callerKey, fail, handleError, imageMime, isCsv, isImage, isPdf, isSpreadsheet, readUpload } from "@/lib/api";
 import { MODELS, generateStructured } from "@/lib/gemini";
 import { TERM_SYSTEM } from "@/lib/prompts";
 import { GeminiTermResponseSchema } from "@/lib/schemas";
 import { toTerm } from "@/lib/convert";
 import { readWorkbook, renderWorkbookForModel } from "@/lib/xlsx";
+import { readCsv } from "@/lib/csv";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -28,7 +29,20 @@ export async function POST(request: NextRequest) {
 
     if (upload) {
       filename = upload.name;
-      if (isSpreadsheet(upload.name, upload.type)) {
+      if (isImage(upload.name, upload.type)) {
+        // VMI Student Planning is a web page, so the schedule usually arrives
+        // as a screenshot rather than a file.
+        parts.push({
+          inlineData: {
+            mimeType: imageMime(upload.name, upload.type),
+            data: upload.bytes.toString("base64"),
+          },
+        });
+      } else if (isCsv(upload.name, upload.type)) {
+        const wb = readCsv(upload.bytes.toString("utf8"), upload.name);
+        if (wb.sheets.length === 0) return fail("That CSV appears to be empty.", 422, "empty_file");
+        parts.push({ text: renderWorkbookForModel(wb) });
+      } else if (isSpreadsheet(upload.name, upload.type)) {
         const wb = await readWorkbook(upload.bytes, upload.name);
         if (wb.sheets.length === 0) {
           return fail("That workbook has no readable sheets.", 422, "empty_workbook");

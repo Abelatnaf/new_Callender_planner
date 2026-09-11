@@ -134,8 +134,8 @@ export default function SetupPage() {
         <div className="grid-2">
           <Dropzone
             title="Drop your schedule"
-            hint="Excel · PDF · whatever the registrar handed you"
-            accept=".xlsx,.xls,.xlsm,.pdf,.csv,.txt,application/pdf"
+            hint="Screenshot · PDF · Excel · CSV — or paste it below"
+            accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp,.pdf,.xlsx,.xls,.xlsm,.csv,.txt,application/pdf"
             busy={busy}
             loaded={vault.term?.source?.filename ?? null}
             onFile={(file) => { const f = new FormData(); f.set("file", file); void importTerm(f); }}
@@ -299,6 +299,63 @@ function Settings() {
           screen but will not survive a reload. Export your vault to keep them.
         </div>
       )}
+
+      <div className="grid-2" style={{ marginBottom: "var(--s-6)" }}>
+        <label className="field">
+          <span className="label">Class</span>
+          <select
+            className="select"
+            value={vault.settings.cadet.class}
+            onChange={(e) => api.setSettings({
+              cadet: { ...vault.settings.cadet, class: e.target.value as "4/C" | "3/C" | "2/C" | "1/C" },
+            })}
+          >
+            {["4/C", "3/C", "2/C", "1/C"].map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span className="label">Company</span>
+          <input
+            className="input"
+            value={vault.settings.cadet.company}
+            onChange={(e) => api.setSettings({
+              cadet: { ...vault.settings.cadet, company: e.target.value },
+            })}
+          />
+        </label>
+        <label className="field">
+          <span className="label">Athletics</span>
+          <select
+            className="select"
+            value={vault.settings.cadet.athletics}
+            onChange={(e) => api.setSettings({
+              cadet: { ...vault.settings.cadet, athletics: e.target.value as "none" | "ncaa" | "club" },
+            })}
+          >
+            <option value="none">None — regular Corps PT</option>
+            <option value="ncaa">NCAA team</option>
+            <option value="club">Club sport</option>
+          </select>
+        </label>
+        {vault.settings.cadet.athletics === "ncaa" && (
+          <label className="field">
+            <span className="label">Team</span>
+            <input
+              className="input"
+              value={vault.settings.cadet.team ?? ""}
+              onChange={(e) => api.setSettings({
+                cadet: { ...vault.settings.cadet, team: e.target.value || undefined },
+              })}
+            />
+          </label>
+        )}
+      </div>
+
+      <p className="prose" style={{ fontSize: "var(--t-footnote)", marginBottom: "var(--s-6)" }}>
+        The Matrix lists the whole Corps&apos; week. This is how the app knows which rows are
+        yours — Guard Mount rotates by company, Rat Challenge is for Rats, Band Practice is
+        for Band.
+      </p>
 
       <div className="grid-2">
         <label className="field">

@@ -59,10 +59,10 @@ describe("buildDayInventory", () => {
 
   it("splits the evening around CQ into separate labelled gaps", () => {
     const evening = day.gaps.filter((g) => g.startMin >= 1125);
-    // 1845-1930 open, 1930-2230 room-bound (CQ), 2230-2300 open again.
+    // 1845-1930 open, 1930-2230 room-bound (CQ), then open until the day ends.
     expect(evening.map((g) => g.quality)).toEqual(["OPEN", "ROOM_BOUND", "OPEN"]);
     expect(evening.map((g) => [g.startMin, g.endMin])).toEqual([
-      [1125, 1170], [1170, 1350], [1350, 1380],
+      [1125, 1170], [1170, 1350], [1350, settings.dayEndMin],
     ]);
   });
 
@@ -77,19 +77,19 @@ describe("the availability ratchet", () => {
   it("lets BLOCKED events consume time", () => {
     const withBlock = buildDayInventory(MONDAY, null,
       [ev("X", "Parade", MONDAY, 600, 720, "parade", "BLOCKED")], settings);
-    expect(withBlock.freeMinutes).toBe((23 - 6) * 60 - 120);
+    expect(withBlock.freeMinutes).toBe(settings.dayEndMin - settings.dayStartMin - 120);
   });
 
   it("never lets a USABLE event consume time", () => {
     const withUsable = buildDayInventory(MONDAY, null,
       [ev("X", "Open Period", MONDAY, 600, 720, "study", "USABLE")], settings);
-    expect(withUsable.freeMinutes).toBe((23 - 6) * 60);
+    expect(withUsable.freeMinutes).toBe(settings.dayEndMin - settings.dayStartMin);
   });
 
   it("never lets a PARTIAL event consume time - only label it", () => {
     const withPartial = buildDayInventory(MONDAY, null,
       [ev("X", "CQ", MONDAY, 600, 720, "study", "PARTIAL")], settings);
-    expect(withPartial.freeMinutes).toBe((23 - 6) * 60);
+    expect(withPartial.freeMinutes).toBe(settings.dayEndMin - settings.dayStartMin);
     expect(withPartial.gaps.some((g) => g.quality === "ROOM_BOUND")).toBe(true);
   });
 });

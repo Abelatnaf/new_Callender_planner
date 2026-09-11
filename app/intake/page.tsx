@@ -44,6 +44,7 @@ export default function IntakePage() {
       form.set("file", file);
       form.set("weekStart", monday);
       form.set("timezone", vault.settings.timezone);
+      form.set("cadet", JSON.stringify(vault.settings.cadet));
       const res = await fetch("/api/parse/matrix", {
         method: "POST", body: form, headers: keyHeaders(),
       });
@@ -53,12 +54,16 @@ export default function IntakePage() {
       const parsed = data.week as MatrixWeek;
       api.upsertMatrixWeek(parsed);
 
-      const blocked = parsed.events.filter((e) => e.availability === "BLOCKED").length;
+      const mine = parsed.events.filter((e) => e.appliesToMe !== false);
+      const blocked = mine.filter((e) => e.availability === "BLOCKED").length;
       setMatrixMsg({
         kind: data.ratchetedCount > 0 ? "warn" : "ok",
         title: `Read ${parsed.events.length} events for the week of ${shortDate(parsed.weekStart)}`,
         lines: [
-          `${blocked} mandatory, ${parsed.events.length - blocked} usable.`,
+          `${mine.length} apply to you — ${blocked} mandatory, ${mine.length - blocked} usable.`,
+          ...(data.notMine > 0
+            ? [`${data.notMine} belong to other companies, classes or the Band — kept for reference, but they do not take your time.`]
+            : []),
           ...(data.ratchetedCount > 0
             ? [`${data.ratchetedCount} were marked mandatory because Gemini was not confident. Review them below — you may have more free time than shown.`]
             : []),
@@ -137,8 +142,8 @@ export default function IntakePage() {
           <div>
             <Dropzone
               title="Drop the Matrix"
-              hint="Excel · .xlsx / .xls / .pdf"
-              accept=".xlsx,.xls,.xlsm,.pdf,application/pdf"
+              hint="CSV · Excel · PDF — the weekly master schedule"
+              accept=".csv,.tsv,.xlsx,.xls,.xlsm,.pdf,text/csv,application/pdf"
               busy={matrixBusy}
               loaded={week?.source?.filename ?? null}
               onFile={uploadMatrix}
@@ -195,7 +200,7 @@ export default function IntakePage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Day</th><th>Time</th><th>Event</th><th>Kind</th><th>Status</th><th>Source</th>
+                  <th>Day</th><th>Time</th><th>Event</th><th>For</th><th>Status</th><th>Source</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,9 +209,16 @@ export default function IntakePage() {
                     <td className="num-cell">{shortDate(e.date)}</td>
                     <td className="num-cell">{hhmm(e.startMin)}–{hhmm(e.endMin)}</td>
                     <td>{e.title}</td>
-                    <td className="muted">{e.kind}</td>
+                    <td className="muted">
+                      {e.pax || e.kind}
+                      {e.appliesToMe === false && (
+                        <span className="label" style={{ marginLeft: 6 }}>not you</span>
+                      )}
+                    </td>
                     <td>
-                      <AvailabilityTag value={e.availability} />
+                      {e.appliesToMe === false
+                        ? <span className="label">—</span>
+                        : <AvailabilityTag value={e.availability} />}
                     </td>
                     <td className="muted" style={{ fontSize: "var(--t-caption)" }}>
                       {e.confirmedByUser ? "you" : `gemini ${Math.round(e.confidence * 100)}%`}
@@ -240,6 +252,7 @@ function ReviewRow({ event, onSet }: { event: MatrixEvent; onSet: (id: string, a
           {formatDuration(event.endMin - event.startMin)}
         </span>
         <div className="review-row__why">
+          {event.pax ? `${event.pax} · ` : ""}
           {event.ratcheted ? "Forced to mandatory — " : ""}
           {event.note ?? `read from "${event.raw}"`}
           {` · ${Math.round(event.confidence * 100)}% confident`}
