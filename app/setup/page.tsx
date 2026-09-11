@@ -9,6 +9,8 @@
  */
 import { useCallback, useState } from "react";
 import { Dropzone } from "@/components/Dropzone";
+import { KeyGate } from "@/components/KeyGate";
+import { keyHeaders } from "@/lib/apikey";
 import { useVault } from "@/lib/store";
 import type { Course, Term } from "@/lib/schemas";
 import { WEEKDAYS, type Weekday, formatDuration, hcolonmm, toMinutes } from "@/lib/time";
@@ -28,7 +30,9 @@ export default function SetupPage() {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/parse/term", { method: "POST", body: payload });
+      const res = await fetch("/api/parse/term", {
+        method: "POST", body: payload, headers: keyHeaders(),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not read that.");
       const term = data.term as Term;
@@ -124,6 +128,8 @@ export default function SetupPage() {
             </div>
           )}
         </div>
+
+        <KeyGate />
 
         <div className="grid-2">
           <Dropzone

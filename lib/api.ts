@@ -3,6 +3,22 @@ import { MissingKeyError, ModelError } from "./gemini";
 
 export type ApiError = { error: string; kind: string; detail?: string };
 
+/** Header carrying a caller-supplied Gemini key, for deployments with no env var. */
+export const KEY_HEADER = "x-gemini-key";
+
+/**
+ * A Gemini key supplied by the browser.
+ *
+ * Only consulted when the server has none of its own. It is passed straight to
+ * the Gemini client for that single request - never logged, never cached, never
+ * written anywhere. Read from a header rather than the body so the same path
+ * works for JSON routes and multipart uploads alike.
+ */
+export function callerKey(request: Request): string | undefined {
+  const raw = request.headers.get(KEY_HEADER)?.trim();
+  return raw ? raw : undefined;
+}
+
 export function fail(message: string, status: number, kind = "error", detail?: string) {
   return Response.json({ error: message, kind, detail } satisfies ApiError, { status });
 }
@@ -11,15 +27,31 @@ export function handleError(err: unknown): Response {
   if (err instanceof MissingKeyError) {
     return fail(err.message, 503, "missing_key");
   }
+
+  const message = err instanceof Error ? err.message : String(err);
+
+  // These are matched on the message BEFORE the ModelError branch: a rejected
+  // key arrives wrapped in a ModelError, and a typo is by far the likeliest
+  // failure for someone pasting their own key. Showing them Google's raw JSON
+  // instead of "your key was rejected" would be a poor way to find that out.
+  if (/PERMISSION_DENIED|API[_ ]KEY[_ ]INVALID|API key not valid/i.test(message)) {
+    return fail(
+      "That Gemini API key was rejected. Check it was copied whole, and that the " +
+        "Generative Language API is enabled for it.",
+      401,
+      "bad_key",
+    );
+  }
+  if (/RESOURCE_EXHAUSTED|\b429\b|quota/i.test(message)) {
+    return fail(
+      "Gemini is rate limiting this key, or its quota is spent. Wait a moment and try again.",
+      429,
+      "rate_limit",
+    );
+  }
+
   if (err instanceof ModelError) {
     return fail(`Gemini could not complete this: ${err.message}`, 502, "model_error");
-  }
-  const message = err instanceof Error ? err.message : String(err);
-  if (/PERMISSION_DENIED|API key not valid|API_KEY_INVALID/i.test(message)) {
-    return fail("The Gemini API key was rejected. Check GEMINI_API_KEY.", 401, "bad_key");
-  }
-  if (/RESOURCE_EXHAUSTED|429/.test(message)) {
-    return fail("Gemini is rate limiting this key. Wait a moment and try again.", 429, "rate_limit");
   }
   return fail(message || "Something went wrong.", 500, "unknown");
 }

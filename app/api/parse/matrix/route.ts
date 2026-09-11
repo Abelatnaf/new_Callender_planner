@@ -7,7 +7,7 @@
  * lib/convert.ts decides how much of that interpretation to trust.
  */
 import { NextRequest } from "next/server";
-import { fail, handleError, isPdf, isSpreadsheet, readUpload } from "@/lib/api";
+import { callerKey, fail, handleError, isPdf, isSpreadsheet, readUpload } from "@/lib/api";
 import { MODELS, generateStructured } from "@/lib/gemini";
 import { MATRIX_SYSTEM } from "@/lib/prompts";
 import { GeminiMatrixResponseSchema } from "@/lib/schemas";
@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
       parts,
       schema: GeminiMatrixResponseSchema,
       temperature: 0,
+      apiKey: callerKey(request),
     });
 
     const conversion = toMatrixWeek(response, upload.name, anchor);

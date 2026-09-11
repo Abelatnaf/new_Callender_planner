@@ -12,6 +12,8 @@ import { useCallback, useMemo, useState } from "react";
 import { Ribbon, RibbonScale } from "@/components/Ribbon";
 import { Empty } from "@/components/Empty";
 import { AskPanel } from "@/components/AskPanel";
+import { KeyGate } from "@/components/KeyGate";
+import { keyHeaders } from "@/lib/apikey";
 import { Briefing } from "@/components/Briefing";
 import { useVault, planFor, weekFor, currentWeekStart } from "@/lib/store";
 import { buildWeekInventory, labeledMeetingsOn } from "@/lib/gaps";
@@ -62,7 +64,7 @@ export default function WeekPage() {
     try {
       const res = await fetch("/api/plan", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: keyHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           weekStart: monday,
           term: vault.term,
@@ -141,6 +143,8 @@ export default function WeekPage() {
                 <span className="tally__l">Overdue</span>
               </div>
             </div>
+
+            <KeyGate />
 
             {unconfirmed > 0 && (
               <div className="notice notice--signal no-print" style={{ marginTop: "var(--u-3)" }}>

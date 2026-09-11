@@ -7,7 +7,7 @@
  * seconds of correction, not a term of bad plans.
  */
 import { NextRequest } from "next/server";
-import { fail, handleError, isPdf, isSpreadsheet, readUpload } from "@/lib/api";
+import { callerKey, fail, handleError, isPdf, isSpreadsheet, readUpload } from "@/lib/api";
 import { MODELS, generateStructured } from "@/lib/gemini";
 import { TERM_SYSTEM } from "@/lib/prompts";
 import { GeminiTermResponseSchema } from "@/lib/schemas";
@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       parts,
       schema: GeminiTermResponseSchema,
       temperature: 0,
+      apiKey: callerKey(request),
     });
 
     const { term, warnings } = toTerm(response, filename);

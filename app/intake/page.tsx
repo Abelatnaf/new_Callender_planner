@@ -11,6 +11,8 @@
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { Dropzone } from "@/components/Dropzone";
+import { KeyGate } from "@/components/KeyGate";
+import { keyHeaders } from "@/lib/apikey";
 import { useVault, weekFor } from "@/lib/store";
 import { parseIcs, mergeAssignments } from "@/lib/ics";
 import { CONFIDENCE_FLOOR } from "@/lib/convert";
@@ -42,7 +44,9 @@ export default function IntakePage() {
       form.set("file", file);
       form.set("weekStart", monday);
       form.set("timezone", vault.settings.timezone);
-      const res = await fetch("/api/parse/matrix", { method: "POST", body: form });
+      const res = await fetch("/api/parse/matrix", {
+        method: "POST", body: form, headers: keyHeaders(),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not read that file.");
 
@@ -126,6 +130,8 @@ export default function IntakePage() {
             <button className="btn btn--sm" onClick={() => setOffset((o) => o + 1)}>→</button>
           </div>
         </div>
+
+        <KeyGate />
 
         <div className="grid-2">
           <div>

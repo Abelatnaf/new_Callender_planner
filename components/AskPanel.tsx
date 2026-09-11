@@ -8,6 +8,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Plan, Vault } from "@/lib/schemas";
+import { keyHeaders } from "@/lib/apikey";
 
 type Turn = { role: "user" | "model"; text: string };
 
@@ -58,7 +59,7 @@ export function AskPanel({
     try {
       const res = await fetch("/api/ask", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: keyHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           question: q,
           history: priorHistory,

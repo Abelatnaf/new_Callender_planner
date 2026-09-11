@@ -19,8 +19,8 @@ export const MODELS = {
 export class MissingKeyError extends Error {
   constructor() {
     super(
-      "GEMINI_API_KEY is not set. Add it to .env.local for local development, " +
-        "or to the project's Environment Variables in Vercel.",
+      "No Gemini API key is available. Either set GEMINI_API_KEY on the server, " +
+        "or paste your own key on the Semester page - it stays in your browser.",
     );
     this.name = "MissingKeyError";
   }
@@ -33,13 +33,24 @@ export class ModelError extends Error {
   }
 }
 
-let client: GoogleGenAI | null = null;
+let serverClient: GoogleGenAI | null = null;
 
-export function getClient(): GoogleGenAI {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new MissingKeyError();
-  client ??= new GoogleGenAI({ apiKey });
-  return client;
+/**
+ * Resolve a client.
+ *
+ * The server key is preferred. A caller-supplied key is the fallback for a
+ * deployment whose owner cannot set environment variables - it is used for that
+ * one request and never cached, stored or logged.
+ */
+export function getClient(callerKey?: string): GoogleGenAI {
+  const serverKey = process.env.GEMINI_API_KEY;
+  if (serverKey) {
+    serverClient ??= new GoogleGenAI({ apiKey: serverKey });
+    return serverClient;
+  }
+  const trimmed = callerKey?.trim();
+  if (trimmed) return new GoogleGenAI({ apiKey: trimmed });
+  throw new MissingKeyError();
 }
 
 export function hasKey(): boolean {
@@ -100,6 +111,8 @@ export type StructuredRequest<T> = {
   /** Lower for extraction, higher for the briefing's prose. */
   temperature?: number;
   maxOutputTokens?: number;
+  /** Used only when the server has no key of its own. Never persisted. */
+  apiKey?: string;
 };
 
 const TRANSIENT = /\b(429|500|502|503|504|UNAVAILABLE|RESOURCE_EXHAUSTED|DEADLINE_EXCEEDED|overloaded)\b/i;
@@ -112,7 +125,7 @@ const TRANSIENT = /\b(429|500|502|503|504|UNAVAILABLE|RESOURCE_EXHAUSTED|DEADLIN
  * that the model is not doing what was asked.
  */
 export async function generateStructured<T>(req: StructuredRequest<T>): Promise<T> {
-  const ai = getClient();
+  const ai = getClient(req.apiKey);
   const model = req.model ?? MODELS.parse;
   const responseJsonSchema = toGeminiSchema(req.schema);
 
@@ -178,8 +191,9 @@ export async function streamText(opts: {
   system: string;
   history: Array<{ role: "user" | "model"; text: string }>;
   temperature?: number;
+  apiKey?: string;
 }): Promise<AsyncGenerator<string>> {
-  const ai = getClient();
+  const ai = getClient(opts.apiKey);
   const stream = await ai.models.generateContentStream({
     model: opts.model ?? MODELS.plan,
     contents: opts.history.map((m) => ({ role: m.role, parts: [{ text: m.text }] })),

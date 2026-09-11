@@ -76,6 +76,20 @@ npm run dev
 Get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 `GET /api/health` reports whether the key is configured.
 
+### Two ways to supply the key
+
+**Server key (preferred).** Set `GEMINI_API_KEY` in the environment. It is read
+server-side only, never reaches the browser, and every visitor is covered.
+
+**Your own key (fallback).** If no server key is set, the app says so and offers
+a field to paste one. That key is kept in your browser's `localStorage`, sent
+with each request as a header, used once and discarded server-side. It is never
+logged, and it is deliberately stored outside the vault so a vault export never
+contains it.
+
+The fallback exists because the person running the app is not always the person
+who can edit its environment variables. A server key always wins when present.
+
 ```bash
 npm test          # 141 unit + integration tests
 npm run typecheck
@@ -111,11 +125,17 @@ The preset is sticky, so adding Next.js later does not revisit it.
 > Save, then Deployments → latest → ⋯ → **Redeploy**.
 
 **The site loads, but Matrix import, planning and Ask all fail with 503.**
-`GEMINI_API_KEY` is not set. Canvas `.ics` import keeps working throughout,
-because that parser is deterministic and never calls Gemini.
+No Gemini key is available. Either set `GEMINI_API_KEY` and redeploy, or paste
+your own key into the prompt the app shows you — that works immediately and
+needs no access to the hosting environment. Canvas `.ics` import keeps working
+throughout either way, because that parser is deterministic and never calls
+Gemini.
 
 **Key added, still 503.** Environment variables do not apply to builds that
 already ran. Redeploy.
+
+**401, "that Gemini API key was rejected".** The key is wrong or incomplete, or
+the Generative Language API is not enabled for it.
 
 ---
 
