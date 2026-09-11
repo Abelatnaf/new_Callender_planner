@@ -65,6 +65,16 @@ export const MatrixEventSchema = z.object({
   availability: AvailabilitySchema,
   confidence: z.number().min(0).max(1),
   note: z.string().optional(),     // why the model classified it this way
+  /** The Matrix's PAX column: who this row is for. */
+  pax: z.string().default(""),
+  /**
+   * Whether this row is this cadet's problem at all.
+   *
+   * False means it stays visible but never consumes time - Band Practice for a
+   * non-Band cadet, Guard Mount for another company. Most Matrix rows are
+   * somebody else's.
+   */
+  appliesToMe: z.boolean().default(true),
   confirmedByUser: z.boolean().default(false),
   /** True when the ratchet overrode the model and forced this to BLOCKED. */
   ratcheted: z.boolean().default(false),
@@ -164,6 +174,8 @@ const ClockTime = z
 export const GeminiMatrixEventSchema = z.object({
   title: z.string().describe("Short event name as a person would say it, e.g. BRC, Parade, CQ"),
   raw: z.string().describe("The verbatim cell text this came from, for auditing"),
+  pax: z.string().describe("The PAX column verbatim: who this row is for"),
+  appliesToMe: z.boolean().describe("Whether this row applies to THIS cadet, given their profile"),
   day: z.enum(["MO", "TU", "WE", "TH", "FR", "SA", "SU"]),
   start: ClockTime,
   end: ClockTime,
@@ -229,10 +241,26 @@ export const GeminiPlanResponseSchema = z.object({
 
 /* ------------------------------------------------------------------ vault */
 
+/**
+ * Who the cadet is.
+ *
+ * The Matrix lists the whole Corps' week, and most rows do not apply to any one
+ * cadet: Band Practice is for Band, Guard Mount rotates by company, Rat
+ * Challenge is for rats. Without this, every row would block time and the week
+ * would vanish under other people's obligations.
+ */
+export const CadetSchema = z.object({
+  class: z.enum(["4/C", "3/C", "2/C", "1/C"]).default("4/C"),
+  company: z.string().default("Bravo"),
+  athletics: z.enum(["none", "ncaa", "club"]).default("none"),
+  team: z.string().optional(),
+});
+
 export const SettingsSchema = z.object({
+  cadet: CadetSchema.default({ class: "4/C", company: "Bravo", athletics: "none" }),
   timezone: z.string().default("America/New_York"),
   dayStartMin: Minute.default(6 * 60),     // nothing scheduled before 0600
-  dayEndMin: Minute.default(23 * 60),      // nothing scheduled after 2300
+  dayEndMin: Minute.default(23 * 60 + 30), // Taps is 2330 on the real Matrix
   dailyCapacityMin: z.number().int().default(4 * 60),
   name: z.string().optional(),
 });
@@ -265,6 +293,7 @@ export type Unplaced = z.infer<typeof UnplacedSchema>;
 export type Briefing = z.infer<typeof BriefingSchema>;
 export type Plan = z.infer<typeof PlanSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;
+export type Cadet = z.infer<typeof CadetSchema>;
 export type Vault = z.infer<typeof VaultSchema>;
 export type GeminiPlanResponse = z.infer<typeof GeminiPlanResponseSchema>;
 export type GeminiMatrixResponse = z.infer<typeof GeminiMatrixResponseSchema>;

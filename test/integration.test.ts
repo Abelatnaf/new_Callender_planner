@@ -145,21 +145,22 @@ describe("end to end", () => {
       weekStartDate: MONDAY,
       events: [
         ...(["MO","TU","WE","TH","FR"] as const).flatMap((day) => [
-          { title: "BRC", raw: "BRC", day, start: "06:30", end: "07:00", kind: "formation" as const, availability: "BLOCKED" as const, confidence: 0.98 },
-          { title: "DRC", raw: "DRC", day, start: "12:10", end: "12:40", kind: "formation" as const, availability: "BLOCKED" as const, confidence: 0.98 },
-          { title: "SRC", raw: "SRC", day, start: "18:15", end: "18:45", kind: "formation" as const, availability: "BLOCKED" as const, confidence: 0.98 },
+          { title: "BRC", raw: "BRC", day, start: "06:30", end: "07:00", kind: "formation" as const, availability: "BLOCKED" as const, confidence: 0.98, pax: "Corps", appliesToMe: true },
+          { title: "DRC", raw: "DRC", day, start: "12:10", end: "12:40", kind: "formation" as const, availability: "BLOCKED" as const, confidence: 0.98, pax: "Corps", appliesToMe: true },
+          { title: "SRC", raw: "SRC", day, start: "18:15", end: "18:45", kind: "formation" as const, availability: "BLOCKED" as const, confidence: 0.98, pax: "Corps", appliesToMe: true },
         ]),
-        { title: "Corps Athletics", raw: "CORPS ATHLETICS", day: "MO", start: "16:00", end: "17:30", kind: "athletics", availability: "BLOCKED", confidence: 0.95 },
-        { title: "Corps Athletics", raw: "CORPS ATHLETICS", day: "TU", start: "16:00", end: "17:30", kind: "athletics", availability: "BLOCKED", confidence: 0.95 },
-        { title: "Parade", raw: "PARADE", day: "TH", start: "15:30", end: "17:30", kind: "parade", availability: "BLOCKED", confidence: 0.97 },
-        { title: "SMI", raw: "SMI", day: "SA", start: "08:00", end: "10:00", kind: "inspection", availability: "BLOCKED", confidence: 0.96 },
+        { title: "Corps Athletics", raw: "CORPS ATHLETICS", day: "MO", start: "16:00", end: "17:30", kind: "athletics", availability: "BLOCKED", confidence: 0.95, pax: "Corps", appliesToMe: true },
+        { title: "Corps Athletics", raw: "CORPS ATHLETICS", day: "TU", start: "16:00", end: "17:30", kind: "athletics", availability: "BLOCKED", confidence: 0.95, pax: "Corps", appliesToMe: true },
+        { title: "Parade", raw: "PARADE", day: "TH", start: "15:30", end: "17:30", kind: "parade", availability: "BLOCKED", confidence: 0.97, pax: "Corps", appliesToMe: true },
+        { title: "SMI", raw: "SMI", day: "SA", start: "08:00", end: "10:00", kind: "inspection", availability: "BLOCKED", confidence: 0.96, pax: "Corps", appliesToMe: true },
         ...(["MO","TU","WE","TH","SU"] as const).map((day) => ({
           title: "CQ", raw: "CQ", day, start: "19:30", end: "22:30",
           kind: "study" as const, availability: "PARTIAL" as const, confidence: 0.93,
+          pax: "Corps", appliesToMe: true,
           note: "Call to Quarters — confined to room but this is the main study window.",
         })),
         // One the model is unsure about: the ratchet must force it to BLOCKED.
-        { title: "Unit Function", raw: "UNIT FUNC?", day: "FR", start: "19:00", end: "21:00", kind: "other", availability: "USABLE", confidence: 0.42, note: "Cell text was ambiguous." },
+        { title: "Unit Function", raw: "UNIT FUNC?", day: "FR", start: "19:00", end: "21:00", kind: "other", availability: "USABLE", confidence: 0.42, pax: "Select Cadets", appliesToMe: true, note: "Cell text was ambiguous." },
       ],
     };
     const { week, ratchetedCount } = toMatrixWeek(modelMatrix, "MATRIX_WK03.xlsx", MONDAY);

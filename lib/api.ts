@@ -84,3 +84,19 @@ export function isSpreadsheet(name: string, type: string): boolean {
 export function isPdf(name: string, type: string): boolean {
   return /\.pdf$/i.test(name) || type === "application/pdf";
 }
+
+export function isCsv(name: string, type: string): boolean {
+  return /\.(csv|tsv)$/i.test(name) || /csv|tab-separated/i.test(type);
+}
+
+/** Gemini reads these natively; the schedule arrives as a screenshot. */
+export function isImage(name: string, type: string): boolean {
+  return /\.(png|jpe?g|webp|heic)$/i.test(name) || /^image\//i.test(type);
+}
+
+export function imageMime(name: string, type: string): string {
+  if (/^image\/(png|jpeg|webp)$/i.test(type)) return type.toLowerCase();
+  if (/\.png$/i.test(name)) return "image/png";
+  if (/\.webp$/i.test(name)) return "image/webp";
+  return "image/jpeg";
+}

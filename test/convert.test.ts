@@ -4,7 +4,8 @@ import type { Assignment, GeminiMatrixResponse, GeminiTermResponse } from "@/lib
 
 const ev = (over: Partial<GeminiMatrixResponse["events"][number]> = {}) => ({
   title: "BRC", raw: "BRC", day: "MO" as const, start: "06:30", end: "07:00",
-  kind: "formation" as const, availability: "BLOCKED" as const, confidence: 0.95, ...over,
+  kind: "formation" as const, availability: "BLOCKED" as const, confidence: 0.95,
+  pax: "Corps", appliesToMe: true, ...over,
 });
 
 const resp = (events: GeminiMatrixResponse["events"]): GeminiMatrixResponse => ({
@@ -13,20 +14,20 @@ const resp = (events: GeminiMatrixResponse["events"]): GeminiMatrixResponse => (
 
 describe("applyRatchet", () => {
   it("trusts a confident USABLE call", () => {
-    expect(applyRatchet("USABLE", 0.9)).toEqual({ availability: "USABLE", ratcheted: false });
+    expect(applyRatchet("USABLE", 0.9)).toMatchObject({ availability: "USABLE", ratcheted: false });
   });
 
   it("downgrades an unsure USABLE to BLOCKED", () => {
-    expect(applyRatchet("USABLE", 0.4)).toEqual({ availability: "BLOCKED", ratcheted: true });
+    expect(applyRatchet("USABLE", 0.4)).toMatchObject({ availability: "BLOCKED", ratcheted: true });
   });
 
   it("downgrades an unsure PARTIAL to BLOCKED", () => {
-    expect(applyRatchet("PARTIAL", 0.5)).toEqual({ availability: "BLOCKED", ratcheted: true });
+    expect(applyRatchet("PARTIAL", 0.5)).toMatchObject({ availability: "BLOCKED", ratcheted: true });
   });
 
   it("leaves BLOCKED alone no matter how unsure the model was", () => {
     // The ratchet only ever restricts. It must never hand time back.
-    expect(applyRatchet("BLOCKED", 0.01)).toEqual({ availability: "BLOCKED", ratcheted: false });
+    expect(applyRatchet("BLOCKED", 0.01)).toMatchObject({ availability: "BLOCKED", ratcheted: false });
   });
 
   it("treats the floor as inclusive-trusting", () => {
@@ -42,6 +43,24 @@ describe("applyRatchet", () => {
         else expect(["BLOCKED", a]).toContain(out);
       }
     }
+  });
+});
+
+describe("applies-to-me", () => {
+  it("keeps a confident not-mine row from blocking time", () => {
+    const r = applyRatchet("BLOCKED", 0.95, false);
+    expect(r).toMatchObject({ availability: "BLOCKED", appliesToMe: false, ratcheted: false });
+  });
+
+  it("assumes a row IS yours when the model is unsure", () => {
+    // Band Practice misread as maybe-yours costs an hour. A formation misread
+    // as not-yours costs the formation. The ratchet cuts the cheap way.
+    const r = applyRatchet("BLOCKED", 0.3, false);
+    expect(r).toMatchObject({ appliesToMe: true, ratcheted: true });
+  });
+
+  it("carries a confident applies-to-me through untouched", () => {
+    expect(applyRatchet("BLOCKED", 0.99, true).appliesToMe).toBe(true);
   });
 });
 

@@ -19,10 +19,13 @@ already placed into real free gaps and a written read on where the week bites.
 
 ## The weekly ritual
 
-1. **`/setup`** — once a term, load your semester schedule. Edit anything the
-   import got wrong. It stays until the term changes.
-2. **`/intake`** — once a week, drop in the Matrix (`.xlsx`) and your Canvas
-   calendar export (`.ics`). Confirm anything Gemini was unsure about.
+0. **`/setup`** — set your class, company and athletics once. The Matrix lists
+   the whole Corps' week; this is how the app knows which rows are yours.
+1. **`/setup`** — once a term, load your semester schedule. A screenshot of VMI
+   Student Planning works, as do PDF, Excel, CSV or pasted text. Edit anything
+   the import got wrong.
+2. **`/intake`** — once a week, drop in the Matrix (CSV, Excel or PDF) and your
+   Canvas calendar export (`.ics`). Confirm anything Gemini was unsure about.
 3. **`/`** — press *Plan this week*.
 4. **`/document`** — print it.
 
@@ -47,6 +50,17 @@ Gemini never sees a blank calendar and is never asked to do clock arithmetic.
 It is handed a numbered list of real free slots and may only place work by slot
 id. Everything it returns is a proposal, not an answer.
 
+### PAX: most of the Matrix is not yours
+
+The Matrix is the whole Corps' week. Band Practice is for Band, Guard Mount
+rotates by company, Rat Challenge is for Rats, and a Blood Drive is opt-in. Every
+row carries a **PAX** column saying who it is for, and treating all of them as
+obligations would erase your week under other people's duties.
+
+So the app knows who you are — class, company, athletics — and each row is
+scoped against that. A row that is not yours stays visible for reference but
+never consumes time.
+
 ### The availability ratchet
 
 A planner that is wrong about an *obligation* is worse than no planner, because
@@ -67,6 +81,19 @@ print so a wrong call is legible before it costs anything.
 `USABLE` and `PARTIAL` events never subtract time — they only *describe* time
 that is already free. A misclassification can restrict the day but can never
 silently open it.
+
+The same asymmetry governs PAX: when the model is unsure whether a row is yours,
+it is treated as yours and blocked. Wrongly told you are busy costs an hour;
+wrongly told you are free costs a formation.
+
+### The Matrix export is 74% garbage
+
+The real file is 2.4 MB — 146 rows by 16,380 columns — but only 8,336 cells hold
+anything, and 6,132 of those are one row fill-righted across a thousand columns
+by a spreadsheet drag. `trimSheet` in `lib/xlsx.ts` removes them by **column
+occupancy**: a real column (a day, a sport, a field) is used by many rows, while
+each artifact column is touched by exactly one. That takes the file to 2,204
+cells in 19 columns with every day section intact.
 
 ---
 

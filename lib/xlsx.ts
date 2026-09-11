@@ -38,6 +38,21 @@ export type WorkbookGrid = {
 const MAX_ROWS = 300;
 const MAX_COLS = 60;
 
+/**
+ * A column used by only this many rows, sitting past the body of the sheet, is
+ * an export artifact rather than a column of the schedule.
+ *
+ * The real Matrix has one row whose six cells were fill-righted in a repeating
+ * block out to column 16,373 - 6,132 of the file's 8,336 non-empty cells, or
+ * 74% of it. Detecting repeated *values* misses this, because the six cells in
+ * each block differ from each other; it is the block that repeats.
+ *
+ * Column occupancy catches it cleanly and without guessing at widths: a real
+ * column (a day, a sport, a field) is used by many rows, while every one of
+ * those thousands of artifact columns is touched by exactly one.
+ */
+const MIN_COLUMN_ROWS = 2;
+
 export function colName(col: number): string {
   let n = col;
   let out = "";
@@ -145,6 +160,42 @@ export async function readWorkbook(
   return { filename, sheets };
 }
 
+/**
+ * Strip the export garbage before anything sees the grid.
+ *
+ * Returns a new sheet holding only cells that carry information: fill-right
+ * runs collapsed to their first occurrence, and the used range recomputed so a
+ * declared width of 16,380 columns does not push the real content past the
+ * MAX_COLS cap.
+ */
+export function trimSheet(sheet: SheetGrid): SheetGrid {
+  // How many distinct rows use each column?
+  const rowsPerCol = new Map<number, Set<number>>();
+  for (const cell of sheet.cells) {
+    const set = rowsPerCol.get(cell.col) ?? new Set<number>();
+    set.add(cell.row);
+    rowsPerCol.set(cell.col, set);
+  }
+
+  // The body of the sheet: columns shared by more than one row. Anything to the
+  // right of the last of those, used by a single row, is drag residue.
+  const coreCols = [...rowsPerCol.entries()]
+    .filter(([, rows]) => rows.size >= MIN_COLUMN_ROWS)
+    .map(([col]) => col);
+  const lastCore = coreCols.length ? Math.max(...coreCols) : Infinity;
+
+  const kept = sheet.cells.filter(
+    (c) => c.col <= lastCore || (rowsPerCol.get(c.col)?.size ?? 0) >= MIN_COLUMN_ROWS,
+  );
+
+  return {
+    ...sheet,
+    cells: kept,
+    rowCount: Math.max(0, ...kept.map((c) => c.row)),
+    colCount: Math.max(0, ...kept.map((c) => c.col)),
+  };
+}
+
 function parseRef(ref: string): { row: number; col: number } | null {
   const m = /^([A-Z]+)(\d+)$/.exec(ref.replace(/\$/g, "").toUpperCase());
   if (!m) return null;
@@ -161,7 +212,8 @@ function parseRef(ref: string): { row: number; col: number } | null {
  * event here" - which is exactly the misreading that would hand a cadet a free
  * hour that does not exist.
  */
-export function renderSheetForModel(sheet: SheetGrid): string {
+export function renderSheetForModel(input: SheetGrid): string {
+  const sheet = trimSheet(input);
   const filled = new Map<string, string>();
 
   for (const cell of sheet.cells) {
@@ -176,10 +228,16 @@ export function renderSheetForModel(sheet: SheetGrid): string {
 
   const usedCols = [...new Set(sheet.cells.map((c) => c.col))].sort((a, b) => a - b);
   const usedRows = [...new Set(sheet.cells.map((c) => c.row))].sort((a, b) => a - b);
-  const maxCol = Math.max(...usedCols, 1);
+  // Cap on the used range, not the declared one: the real file declares 16,380
+  // columns and a naive cap would have truncated the schedule itself.
+  const maxCol = Math.min(Math.max(...usedCols, 1), MAX_COLS);
 
   const lines: string[] = [];
+  const dropped = input.cells.length - sheet.cells.length;
   lines.push(`SHEET "${sheet.name}" (${sheet.rowCount} rows x ${sheet.colCount} cols)`);
+  if (dropped > 0) {
+    lines.push(`(${dropped} cells were spreadsheet fill-right artifacts and have been removed)`);
+  }
   lines.push(["ROW", ...range(1, maxCol).map(colName)].join("\t"));
 
   const lastRow = Math.max(...usedRows, 1);

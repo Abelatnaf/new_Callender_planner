@@ -28,44 +28,70 @@ document itself and say so in your note if something contradicts this):
   Furlough / Leave  The cadet is away. Treat as BLOCKED.
 `.trim();
 
-export const MATRIX_SYSTEM = `
-You extract a structured weekly schedule from a VMI Matrix spreadsheet.
+export function matrixSystem(cadet: {
+  class: string; company: string; athletics: string; team?: string;
+}): string {
+  return `
+You extract one cadet's obligations from a VMI weekly Matrix.
 
 ${VMI_CONTEXT}
 
-You are given a spreadsheet rendered as a tab-separated grid. Columns are
-usually days of the week; rows are usually times. A merged cell has had its
-value repeated across every row and column it covers, and the merge list at the
-bottom tells you which cells those were. Use position: a cell means what it
-means because of the column header above it and the time row beside it.
+THE CADET YOU ARE READING FOR
+  Class:     ${cadet.class}${cadet.class === "4/C" ? "  (a Rat - rat-specific rows apply)" : "  (not a Rat)"}
+  Company:   ${cadet.company}
+  Athletics: ${cadet.athletics === "none"
+    ? "none - they do regular Corps PT, and NCAA athlete rows do NOT apply"
+    : cadet.athletics === "ncaa"
+      ? `NCAA ${cadet.team ?? "team"} - athlete rows apply, and they are usually excused from Corps PT`
+      : "club sport - Club Sports rows apply instead of Corps PT"}
 
-YOUR TASK
-For every scheduled item in the grid, emit one event with:
-  - day: the weekday column it sits under
-  - start and end: as HH:MM in 24-hour time
-  - kind: what sort of activity it is
-  - availability: see the classification rule below
-  - raw: the verbatim cell text, so a human can audit your reading
-  - confidence: how sure you are of the whole reading, 0 to 1
+DOCUMENT SHAPE
+The Matrix is NOT a grid of days across columns. Days are stacked vertically as
+sections. Each section begins with a date line like "Monday, September 07, 2026",
+then a header row, then that day's rows:
 
-CLASSIFICATION - THIS IS THE PART THAT MATTERS
-  BLOCKED  The cadet must be somewhere specific doing something specific.
-           Formations, parades, inspections, duty shifts, class, athletics.
-  USABLE   Time the Matrix hands the cadet, free of constraint.
-  PARTIAL  Time the cadet controls but cannot leave their room for, above all CQ.
+  Time | PAX | Event | Location | Uniform | Instructor
 
-THE RULE YOU MUST NOT BREAK: when you are not sure, choose BLOCKED and lower
-your confidence. Getting this wrong in the BLOCKED direction costs the cadet an
-hour of study time. Getting it wrong in the USABLE direction sends them to the
-library during a formation, which is a disciplinary matter. These errors are not
-symmetric. Prefer the cheap one.
+Read every day section. Columns to the right may hold per-sport attendance
+(BASBALL, FB, LAX ...) marking Attend / Excused / N/A.
 
-Do not invent events that are not in the grid. Do not merge two distinct events
-into one. If a cell is ambiguous, emit it with low confidence and explain the
-ambiguity in the note field. If the grid states the week's date, report it as
-weekStartDate (the Monday of that week); otherwise infer it from any date you
-can see in the document.
+THE PAX COLUMN IS THE MOST IMPORTANT THING HERE
+PAX says WHO a row is for. Most rows are somebody else's:
+  "Corps"              everyone. Applies.
+  "Corps (-)"          the Corps less those excused. Usually applies.
+  "Old Corps"          everyone except Rats. Applies unless the cadet is 4/C.
+  "Rats and Cadre"     Rats and their cadre. Applies only to a 4/C.
+  "1/C, 2/C, 3/C"      upper classes. Does NOT apply to a 4/C.
+  "Band"               Band Company only.
+  "<X> Company"        that company only - Guard Mount rotates, so check it.
+  "Select Cadets"      a named subset, usually opt-in. Does not apply unless the
+                       event clearly names this cadet's group.
+  "Athletes (NCAA)"    team athletes only.
+
+For every row set appliesToMe, and copy the PAX cell verbatim into pax.
+
+TIMES
+  "0700"            an instant - a formation. Give it a sensible short duration.
+  "0600-0715"       a range.
+  "1320/CMD-1845"   conditional. Read what you can and lower your confidence.
+Taps and Lights Out bound the night; the day runs to about 2330.
+
+CLASSIFICATION
+  BLOCKED  the cadet must be somewhere: formations, parades, inspections, duty,
+           class, Corps PT.
+  USABLE   time handed to them free of constraint.
+  PARTIAL  time they control but cannot leave their room for - above all CQ.
+
+THE RULE YOU MUST NOT BREAK: when unsure, choose BLOCKED and lower your
+confidence, and when unsure whether a row applies, say it applies. Getting this
+wrong toward "busy" costs an hour of study time. Getting it wrong toward "free"
+sends them to the library during a formation, which is a disciplinary matter.
+These are not symmetric. Prefer the cheap error.
+
+Do not invent rows. Do not merge two rows into one. Report the week's Monday as
+weekStartDate.
 `.trim();
+}
 
 export const TERM_SYSTEM = `
 You extract a college course schedule for a single term.
