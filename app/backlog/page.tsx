@@ -64,7 +64,7 @@ export default function BacklogPage() {
         <div className="section-head">
           <div>
             <div className="label">Everything with a deadline</div>
-            <h1 className="display" style={{ fontSize: "var(--t-3xl)" }}>Backlog</h1>
+            <h1 className="display" style={{ fontSize: "var(--t-title1)" }}>Backlog</h1>
           </div>
           <div className="toolbar no-print">
             <div className="seg">
@@ -96,11 +96,11 @@ export default function BacklogPage() {
         </div>
 
         {rows.length === 0 ? (
-          <p className="prose" style={{ marginTop: "var(--u-4)" }}>
+          <p className="prose" style={{ marginTop: "var(--s-8)" }}>
             Nothing here. Drop your Canvas .ics on the Intake page, or add something by hand.
           </p>
         ) : (
-          <div className="scroll-x" style={{ marginTop: "var(--u-4)" }}>
+          <div className="scroll-x" style={{ marginTop: "var(--s-8)" }}>
             <table className="table">
               <thead>
                 <tr>
@@ -119,7 +119,7 @@ export default function BacklogPage() {
                   const urgent = isUrgent(a, nowStamp);
                   const days = daysBetween(now.date, a.dueDate);
                   return (
-                    <tr key={a.id} style={overdue ? { background: "var(--signal-wash)" } : undefined}>
+                    <tr key={a.id} style={overdue ? { background: "var(--red-soft)" } : undefined}>
                       <td>
                         <input
                           type="checkbox"
@@ -128,11 +128,11 @@ export default function BacklogPage() {
                           aria-label={`Mark ${a.title} done`}
                         />
                       </td>
-                      <td className="num-cell" style={overdue || urgent ? { color: "var(--signal)", fontWeight: 700 } : undefined}>
+                      <td className="num-cell" style={overdue || urgent ? { color: "var(--red)", fontWeight: 700 } : undefined}>
                         {WEEKDAY_LONG[weekdayOf(a.dueDate)].slice(0, 3)} {shortDate(a.dueDate)} {hhmm(a.dueMin)}
                       </td>
                       <td className="num-cell">{a.courseCode ?? "—"}</td>
-                      <td style={a.status === "done" ? { textDecoration: "line-through", color: "var(--ink-3)" } : undefined}>
+                      <td style={a.status === "done" ? { textDecoration: "line-through", color: "var(--label-3)" } : undefined}>
                         {a.source === "manual" ? (
                           <input
                             className="input" style={{ minHeight: 28, padding: "2px 6px" }}

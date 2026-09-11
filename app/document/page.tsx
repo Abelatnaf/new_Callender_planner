@@ -62,7 +62,7 @@ export default function DocumentPage() {
 
   return (
     <div className="wrap">
-      <div className="toolbar no-print" style={{ paddingBlock: "var(--u-3)" }}>
+      <div className="toolbar no-print" style={{ paddingBlock: "var(--s-6)" }}>
         <button className="btn btn--sm" onClick={() => setOffset((o) => o - 1)}>←</button>
         <span className="label label--ink">Week of {shortDate(monday)}</span>
         <button className="btn btn--sm" onClick={() => setOffset((o) => o + 1)}>→</button>
@@ -71,7 +71,7 @@ export default function DocumentPage() {
       </div>
 
       {problems.length > 0 && (
-        <div className="notice notice--signal no-print" style={{ marginBottom: "var(--u-3)" }}>
+        <div className="notice notice--signal no-print" style={{ marginBottom: "var(--s-6)" }}>
           <div className="notice__title">{problems.length} block{problems.length > 1 ? "s" : ""} no longer fit</div>
           The schedule changed after this plan was made. Re-plan the week before printing —
           these blocks currently collide with something or sit past a deadline.
@@ -86,7 +86,7 @@ export default function DocumentPage() {
         </header>
 
         <div className="section-head no-print">
-          <h1 className="display" style={{ fontSize: "var(--t-2xl)" }}>Weekly Order</h1>
+          <h1 className="display" style={{ fontSize: "var(--t-title2)" }}>Weekly Order</h1>
           <span className="label">{range}</span>
         </div>
 
@@ -109,7 +109,7 @@ export default function DocumentPage() {
           </div>
         </div>
 
-        <div className="ribbon-board" style={{ marginTop: "var(--u-3)" }}>
+        <div className="ribbon-board" style={{ marginTop: "var(--s-6)" }}>
           <div className="ribbon-board__inner">
             <RibbonScale axis={axis} every={2} />
             {inventory.days.map((day, i) => (
@@ -133,7 +133,7 @@ export default function DocumentPage() {
         </div>
 
         {plan?.briefing.prose && (
-          <div className="avoid-break" style={{ marginTop: "var(--u-4)", display: "grid", gap: "var(--u-3)", gridTemplateColumns: "2fr 1fr" }}>
+          <div className="avoid-break" style={{ marginTop: "var(--s-8)", display: "grid", gap: "var(--s-6)", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
             <div>
               <div className="label label--ink">The read on this week</div>
               <p className="prose" style={{ marginTop: 6 }}>{plan.briefing.prose}</p>
@@ -144,15 +144,15 @@ export default function DocumentPage() {
                   <div className="label label--ink">Where it bites</div>
                   <ul style={{ listStyle: "none", marginTop: 4 }}>
                     {plan.briefing.crunchPoints.map((c) => (
-                      <li key={c} style={{ fontSize: "var(--t-micro)", padding: "3px 0", borderTop: "var(--rule-hair) solid var(--rule-faint)" }}>{c}</li>
+                      <li key={c} style={{ fontSize: "var(--t-caption)", padding: "3px 0", borderTop: "1px solid var(--separator)" }}>{c}</li>
                     ))}
                   </ul>
                 </>
               )}
               {plan.briefing.sacrifice && (
-                <div style={{ marginTop: "var(--u-2)" }}>
+                <div style={{ marginTop: "var(--s-4)" }}>
                   <div className="label label--signal">Drop first</div>
-                  <p style={{ fontSize: "var(--t-micro)", lineHeight: 1.5 }}>{plan.briefing.sacrifice}</p>
+                  <p style={{ fontSize: "var(--t-caption)", lineHeight: 1.5 }}>{plan.briefing.sacrifice}</p>
                 </div>
               )}
             </div>
@@ -173,6 +173,7 @@ export default function DocumentPage() {
         {dueThisWeek.length === 0 ? (
           <p className="prose">Nothing due in this window.</p>
         ) : (
+          <div className="scroll-x">
           <table className="table">
             <thead>
               <tr>
@@ -187,8 +188,8 @@ export default function DocumentPage() {
                 const flag = isOverdue(a, nowStamp) || isUrgent(a, nowStamp);
                 return (
                   <tr key={a.id}>
-                    <td><span className="daypage__check" style={{ display: "inline-block", width: 11, height: 11, border: "var(--rule) solid var(--ink)" }} /></td>
-                    <td className="num-cell" style={flag ? { color: "var(--signal)", fontWeight: 700 } : undefined}>
+                    <td><span className="daypage__check" style={{ display: "inline-block", width: 11, height: 11, border: "var(--separator) solid var(--label)" }} /></td>
+                    <td className="num-cell" style={flag ? { color: "var(--red)", fontWeight: 700 } : undefined}>
                       {WEEKDAY_LONG[weekdayOf(a.dueDate)].slice(0, 3)} {hhmm(a.dueMin)}
                     </td>
                     <td className="num-cell">{a.courseCode ?? "—"}</td>
@@ -202,10 +203,11 @@ export default function DocumentPage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
 
         {plan && plan.unplaced.length > 0 && (
-          <div className="notice notice--signal avoid-break" style={{ marginTop: "var(--u-3)" }}>
+          <div className="notice notice--signal avoid-break" style={{ marginTop: "var(--s-6)" }}>
             <div className="notice__title">Did not fit anywhere</div>
             <ul style={{ listStyle: "none" }}>
               {plan.unplaced.map((u) => (
@@ -239,21 +241,21 @@ export default function DocumentPage() {
               <span className="sheet__meta">{shortDate(day.date)}</span>
             </header>
 
-            <div style={{ display: "flex", alignItems: "baseline", gap: "var(--u-3)", borderBottom: "var(--rule-heavy) solid var(--ink)", paddingBottom: "var(--u)" }}>
-              <span className="num" style={{ fontSize: "var(--t-4xl)" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "var(--s-6)", borderBottom: "var(--separator-strong) solid var(--label)", paddingBottom: "var(--s-2)" }}>
+              <span className="num" style={{ fontSize: "var(--t-hero)" }}>
                 {String(dateParts(day.date).d).padStart(2, "0")}
               </span>
               <div>
-                <div className="display" style={{ fontSize: "var(--t-xl)" }}>{WEEKDAY_LONG[weekdayOf(day.date)]}</div>
+                <div className="display" style={{ fontSize: "var(--t-title3)" }}>{WEEKDAY_LONG[weekdayOf(day.date)]}</div>
                 <div className="label">{formatDuration(day.freeMinutes)} free · {formatDuration(dayBlocks.reduce((n, b) => n + b.endMin - b.startMin, 0))} committed</div>
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--u-4)", marginTop: "var(--u-3)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "var(--s-8)", marginTop: "var(--s-6)" }}>
               <div>
                 <div className="label label--ink">Work</div>
                 {dayBlocks.length === 0 ? (
-                  <p className="muted" style={{ fontSize: "var(--t-tiny)", marginTop: 6 }}>Nothing scheduled.</p>
+                  <p className="muted" style={{ fontSize: "var(--t-footnote)", marginTop: 6 }}>Nothing scheduled.</p>
                 ) : dayBlocks.map((b) => {
                   const a = byId.get(b.assignmentId);
                   return (
@@ -265,14 +267,14 @@ export default function DocumentPage() {
                           <span className="muted" style={{ fontWeight: 400 }}> · {formatDuration(b.endMin - b.startMin)}</span>
                         </div>
                         <div>{a?.courseCode ? `${a.courseCode} · ` : ""}{a?.title ?? b.assignmentId}</div>
-                        {b.rationale && <div className="muted" style={{ fontSize: "var(--t-micro)" }}>{b.rationale}</div>}
+                        {b.rationale && <div className="muted" style={{ fontSize: "var(--t-caption)" }}>{b.rationale}</div>}
                       </div>
                     </div>
                   );
                 })}
 
                 {dueToday.length > 0 && (
-                  <div style={{ marginTop: "var(--u-3)" }}>
+                  <div style={{ marginTop: "var(--s-6)" }}>
                     <div className="label label--signal">Due today</div>
                     {dueToday.map((a) => (
                       <div key={a.id} className="daypage__block">
@@ -290,8 +292,9 @@ export default function DocumentPage() {
               <div>
                 <div className="label label--ink">Obligations</div>
                 {obligations.length === 0 ? (
-                  <p className="muted" style={{ fontSize: "var(--t-tiny)", marginTop: 6 }}>None on the Matrix.</p>
+                  <p className="muted" style={{ fontSize: "var(--t-footnote)", marginTop: 6 }}>None on the Matrix.</p>
                 ) : (
+                  <div className="scroll-x">
                   <table className="table" style={{ marginTop: 4 }}>
                     <tbody>
                       {obligations.map((o, k) => (
@@ -302,13 +305,14 @@ export default function DocumentPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </div>
             </div>
 
-            <div style={{ marginTop: "var(--u-4)" }}>
+            <div style={{ marginTop: "var(--s-8)" }}>
               <div className="label label--ink">Notes</div>
-              <div className="notes-rules" style={{ height: 150, borderTop: "var(--rule) solid var(--ink)", marginTop: 4 }} />
+              <div className="notes-rules" style={{ height: 150, borderTop: "var(--separator) solid var(--label)", marginTop: 4 }} />
             </div>
 
             <Footer range={range} page={String(i + 3)} />
@@ -321,7 +325,7 @@ export default function DocumentPage() {
 
 function Footer({ range, page }: { range: string; page: string }) {
   return (
-    <div className="print-only" style={{ display: "flex", justifyContent: "space-between", marginTop: "var(--u-3)", paddingTop: 4, borderTop: "var(--rule-hair) solid var(--ink-4)", fontSize: "var(--t-micro)", letterSpacing: "var(--track-caps)", textTransform: "uppercase", color: "var(--ink-3)" }}>
+    <div className="print-only" style={{ display: "flex", justifyContent: "space-between", marginTop: "var(--s-6)", paddingTop: 4, borderTop: "var(--separator) solid var(--label-4)", fontSize: "var(--t-caption)", letterSpacing: "var(--track-body)", textTransform: "uppercase", color: "var(--label-3)" }}>
       <span>Order · {range}</span>
       <span>Sheet {page}</span>
     </div>

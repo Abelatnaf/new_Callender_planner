@@ -1,10 +1,13 @@
 /* ===========================================================================
    PRINT
 
-   This design is print-native, so this file is not a rescue operation - it is
-   the same design at a different size. The only real work here is forcing the
-   light palette, making the browser actually lay down the ink (it refuses to
-   print backgrounds unless told), and controlling page breaks.
+   The screen design leans on shadows, blur and saturated fills — all of which
+   print badly, or expensively. So print deliberately flattens to a crisp,
+   ink-efficient document: hairline rules instead of elevation, outlined
+   capsules instead of solid ones, and black text on white.
+
+   The structure is identical to the screen: the same nine sheets, the same
+   ribbons, the same information design.
    =========================================================================== */
 
 @media print {
@@ -13,130 +16,142 @@
     margin: 14mm;
   }
 
-  /* Solid ink bars ARE the design. Without this the browser helpfully drops
-     every background and prints a page of empty outlines. */
+  /* Capsule fills carry meaning, so the browser must actually lay down ink. */
   *, *::before, *::after {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    animation: none !important;
+    transition: none !important;
   }
 
-  /* Paper is paper now. Force the light palette regardless of the viewer's
-     theme - a dark-mode printout is a black rectangle. */
+  /* Force the light palette; a dark-mode printout is a black rectangle. */
   :root, :root[data-theme="dark"] {
-    --paper: #ffffff;
-    --paper-2: #f4f2ed;
-    --paper-3: #e8e5dd;
-    --ink: #000000;
-    --ink-2: #333333;
-    --ink-3: #555555;
-    --ink-4: #999999;
-    --signal: #c0281a;
-    --signal-ink: #ffffff;
-    --signal-wash: #f7e6e3;
-    --ribbon-h: 30px;
-    --t-micro: 7pt;
-    --t-tiny: 8pt;
-    --t-small: 9pt;
-    --t-base: 9.5pt;
+    --bg: #ffffff;
+    --bg-elevated: #ffffff;
+    --bg-sunken: #f4f4f5;
+    --bg-hover: #ffffff;
+    --label: #000000;
+    --label-2: #333333;
+    --label-3: #555555;
+    --label-4: #888888;
+    --separator: #d0d0d2;
+    --separator-strong: #9a9a9e;
+    --blue: #0a5bd3;
+    --blue-soft: #eef4fd;
+    --red: #c0281a;
+    --graphite: #3a3a3c;
+    --graphite-soft: #ededee;
+    --on-accent: #ffffff;
+    --ribbon-h: 34px;
+    --t-caption: 7pt;
+    --t-footnote: 8pt;
+    --t-sub: 9pt;
+    --t-body: 9.5pt;
     color-scheme: light;
   }
 
-  html, body {
-    background: #fff !important;
-    color: #000 !important;
-    font-size: 9pt;
-  }
+  html, body { background: #fff !important; color: #000 !important; font-size: 9pt; }
 
-  /* The paper grain is a screen affectation; real paper has its own. */
-  body::before { display: none !important; }
-
-  /* Everything that is chrome rather than content. */
-  .masthead, .nav, .no-print, .btn, .ask-panel, .colophon,
-  .dropzone, .toolbar, .ribbon__now { display: none !important; }
+  /* Chrome, not content. */
+  .masthead, .nav, .no-print, .btn, .ask-panel, .ask-backdrop,
+  .colophon, .dropzone, .toolbar, .ribbon__now, .meter { display: none !important; }
 
   .wrap { max-width: none; padding: 0; }
-  .section { padding-block: 0; border: 0; }
+  .section { padding-block: 0; }
+  .card { box-shadow: none; padding: 0; border-radius: 0; background: none; }
 
   a { text-decoration: none; color: inherit; }
-  a[href^="http"]::after { content: ""; }  /* no URL litter on a schedule */
 
-  /* ------------------------------------------------------------- pages */
+  /* --------------------------------------------------------------- sheets */
 
-  .sheet {
-    break-after: page;
-    page-break-after: always;
-  }
-  .sheet:last-child {
-    break-after: auto;
-    page-break-after: auto;
-  }
+  .sheet { break-after: page; page-break-after: always; }
+  .sheet:last-child { break-after: auto; page-break-after: auto; }
 
   .sheet__head {
-    display: flex;
+    display: flex !important;
     justify-content: space-between;
     align-items: baseline;
-    border-bottom: 2pt solid #000;
-    padding-bottom: 4pt;
-    margin-bottom: 10pt;
+    border-bottom: 1.2pt solid #000;
+    padding-bottom: 5pt;
+    margin-bottom: 11pt;
   }
-  .sheet__title { font-family: var(--font-display); font-weight: 900; font-size: 16pt; letter-spacing: -0.03em; text-transform: uppercase; }
-  .sheet__meta { font-family: var(--font-mono); font-size: 7pt; letter-spacing: 0.12em; text-transform: uppercase; }
+  .sheet__title { font-size: 15pt; font-weight: 700; letter-spacing: -0.02em; }
+  .sheet__meta { font-size: 8pt; color: #555; }
 
-  /* Never split a day, a block or a table row across two sheets. */
-  .ribbon-row, .bar, .daypage__block, tr, .notice, .avoid-break {
+  .ribbon-row, .bar, .daypage__block, tr, .notice, .avoid-break, .tally {
     break-inside: avoid;
     page-break-inside: avoid;
   }
-
   thead { display: table-header-group; }
 
-  .ribbon-board { overflow: visible !important; }
+  .ribbon-board, .scroll-x { overflow: visible !important; }
   .ribbon-board__inner { min-width: 0 !important; }
+  .ribbon-row:hover { background: none; }
 
-  /* Hatch needs to survive halftoning; tighten it so it does not read grey. */
-  .bar--hatch {
-    background-image: repeating-linear-gradient(
-      45deg, #000 0 0.4pt, transparent 0.4pt 3.5pt
-    ) !important;
+  .ribbon { background: #fff; border: 0.5pt solid var(--separator); border-radius: 3pt; }
+  .ribbon::before { opacity: 0.5; }
+
+  /* Outlined rather than solid: same meaning, a fraction of the toner.
+     The Letter-width track is under half the on-screen one, so print type and
+     padding both step down and the time suffix is dropped entirely - a course
+     code that reads is worth more than a start time the axis already shows. */
+  .bar {
+    border-radius: 2.5pt;
+    font-size: 5.4pt;
+    padding-inline: 1.5pt;
+    letter-spacing: -0.03em;
+    font-weight: 600;
   }
+  .bar__time { display: none !important; }
+  .bar--tight { font-size: 5.4pt; padding-inline: 1pt; }
+  .bar--ai::after { display: none; }
+  .bar--ink { background: var(--graphite) !important; color: #fff !important; }
+  .bar--hatch {
+    background: #fff !important;
+    border: 0.5pt solid var(--separator-strong);
+    background-image: repeating-linear-gradient(-45deg, #bbb 0 0.4pt, transparent 0.4pt 3.5pt) !important;
+  }
+  .bar--work {
+    background: #fff !important;
+    color: var(--blue) !important;
+    border: 1pt solid var(--blue);
+  }
+  .bar--work.is-urgent { color: var(--red) !important; border-color: var(--red); }
 
-  .bar--work { border-width: 0.75pt !important; }
-
-  /* At Letter width the ribbon track is under half its on-screen size, so a
-     50-minute class is ~28px and its label degrades to "MAT...". A solid sliver
-     already reads as "taken"; the day pages carry the detail. */
-  .bar--tight .bar__label { display: none; }
+  .tallies { grid-template-columns: repeat(4, 1fr); gap: 6pt; }
+  .tally { background: none; padding: 0; }
+  .tally__n { font-size: 15pt; }
 
   /* A checkbox to tick as the day is worked. */
-  .daypage__block { display: flex; gap: 8pt; align-items: flex-start; border-bottom: 0.5pt solid #999; padding-block: 5pt; }
-  .daypage__check { width: 10pt; height: 10pt; border: 0.75pt solid #000; flex: none; margin-top: 1pt; }
-
-  /* Ruled space to write in. The paper has to be usable, not just readable. */
-  .notes-rules {
-    background-image: repeating-linear-gradient(
-      to bottom, transparent 0 15pt, #cccccc 15pt 15.4pt
-    );
+  .daypage__block {
+    display: flex;
+    gap: 8pt;
+    align-items: flex-start;
+    border-bottom: 0.4pt solid var(--separator);
+    padding-block: 5pt;
+  }
+  .daypage__check {
+    width: 10pt; height: 10pt;
+    border: 0.75pt solid #000;
+    border-radius: 2pt;
+    flex: none;
+    margin-top: 1pt;
   }
 
-  .print-footer {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    font-family: var(--font-mono);
-    font-size: 6.5pt;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #555;
-    border-top: 0.4pt solid #999;
-    padding-top: 3pt;
-    display: flex;
-    justify-content: space-between;
+  /* Ruled space to write in — the paper has to be usable, not just readable. */
+  .notes-rules {
+    background-image: repeating-linear-gradient(
+      to bottom, transparent 0 15pt, #d8d8d8 15pt 15.4pt
+    );
   }
 }
 
-/* On screen the print-only elements stay out of the way entirely. Note this is
-   the ONLY display rule that touches .print-only: a print-side counterpart
-   using `display: revert` would resolve to the UA default and silently flatten
-   any flex or grid layout those elements rely on. */
+/* On screen, print-only elements stay out of the way. This is the ONLY display
+   rule that touches .print-only: a print-side counterpart using `display:
+   revert` would resolve to the UA default and flatten flex layouts. */
 @media screen {
   .print-only { display: none !important; }
 }

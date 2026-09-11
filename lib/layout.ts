@@ -33,8 +33,8 @@ export function placement(
  * black sliver already reads as "this time is taken".
  */
 export function barDetail(widthPct: number): "none" | "label" | "full" {
-  if (widthPct < 2.6) return "none";
-  if (widthPct < 6) return "label";
+  if (widthPct < 2.0) return "none";
+  if (widthPct < 11) return "label";
   return "full";
 }
 

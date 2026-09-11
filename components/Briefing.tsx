@@ -22,7 +22,7 @@ export function Briefing({ plan, assignments }: { plan: Plan; assignments: Assig
         </span>
       </div>
 
-      <div style={{ display: "grid", gap: "var(--u-5)", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+      <div style={{ display: "grid", gap: "var(--s-10)", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
         {briefing.prose && (
           <p className="prose" style={{ gridColumn: hasLists ? "auto" : "1 / -1" }}>
             {briefing.prose}
@@ -38,14 +38,14 @@ export function Briefing({ plan, assignments }: { plan: Plan; assignments: Assig
       </div>
 
       {briefing.sacrifice && (
-        <div className="notice" style={{ marginTop: "var(--u-4)" }}>
+        <div className="notice" style={{ marginTop: "var(--s-8)" }}>
           <div className="notice__title">If the week compresses, drop this first</div>
           {briefing.sacrifice}
         </div>
       )}
 
       {plan.unplaced.length > 0 && (
-        <div className="notice notice--signal avoid-break" style={{ marginTop: "var(--u-4)" }}>
+        <div className="notice notice--signal avoid-break" style={{ marginTop: "var(--s-8)" }}>
           <div className="notice__title">
             {plan.unplaced.length} item{plan.unplaced.length > 1 ? "s" : ""} would not fit
           </div>
@@ -70,21 +70,21 @@ export function Briefing({ plan, assignments }: { plan: Plan; assignments: Assig
 function List({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
-      <h3 className="label label--ink" style={{ marginBottom: "var(--u)" }}>{title}</h3>
+      <h3 className="label label--ink" style={{ marginBottom: "var(--s-2)" }}>{title}</h3>
       <ul style={{ listStyle: "none" }}>
         {items.map((t) => (
           <li
             key={t}
             style={{
-              padding: "var(--u) 0",
-              borderTop: "var(--rule-hair) solid var(--rule-faint)",
-              fontSize: "var(--t-tiny)",
+              padding: "var(--s-2) 0",
+              borderTop: "1px solid var(--separator)",
+              fontSize: "var(--t-footnote)",
               lineHeight: 1.5,
               display: "flex",
-              gap: "var(--u)",
+              gap: "var(--s-2)",
             }}
           >
-            <span aria-hidden="true" style={{ color: "var(--ink-4)" }}>—</span>
+            <span aria-hidden="true" style={{ color: "var(--label-4)" }}>—</span>
             <span>{t}</span>
           </li>
         ))}
