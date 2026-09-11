@@ -7,7 +7,7 @@
  */
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { fail, handleError } from "@/lib/api";
+import { callerKey, fail, handleError } from "@/lib/api";
 import { MODELS, streamText } from "@/lib/gemini";
 import { ASK_SYSTEM } from "@/lib/prompts";
 import {
@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       model: MODELS.plan,
       system: `${ASK_SYSTEM}\n\n--- THE CADET'S ACTUAL WEEK ---\n${ground}`,
       history: [...history, { role: "user" as const, text: question }],
+      apiKey: callerKey(request),
     });
 
     const encoder = new TextEncoder();

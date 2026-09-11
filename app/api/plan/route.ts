@@ -12,7 +12,7 @@
  */
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { fail, handleError } from "@/lib/api";
+import { callerKey, fail, handleError } from "@/lib/api";
 import { MODELS, generateStructured } from "@/lib/gemini";
 import { PLAN_SYSTEM } from "@/lib/prompts";
 import {
@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
       schema: GeminiPlanResponseSchema,
       temperature: 0.3,
       maxOutputTokens: 16_384,
+      apiKey: callerKey(request),
     });
 
     const { plan, issues, estimates } = materializePlan({

@@ -76,6 +76,20 @@ npm run dev
 Get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 `GET /api/health` reports whether the key is configured.
 
+### Two ways to supply the key
+
+**Server key (preferred).** Set `GEMINI_API_KEY` in the environment. It is read
+server-side only, never reaches the browser, and every visitor is covered.
+
+**Your own key (fallback).** If no server key is set, the app says so and offers
+a field to paste one. That key is kept in your browser's `localStorage`, sent
+with each request as a header, used once and discarded server-side. It is never
+logged, and it is deliberately stored outside the vault so a vault export never
+contains it.
+
+The fallback exists because the person running the app is not always the person
+who can edit its environment variables. A server key always wins when present.
+
 ```bash
 npm test          # 141 unit + integration tests
 npm run typecheck
@@ -88,9 +102,40 @@ Import the repo, then set **`GEMINI_API_KEY`** in Project → Settings →
 Environment Variables. Nothing else is required. The key is read server-side
 only and never reaches the browser.
 
+`vercel.json` pins the framework to `nextjs`, so a project whose dashboard
+preset is wrong (or was set before this repo had any code in it) still builds
+correctly.
+
 Model ids default to the floating aliases `gemini-pro-latest` and
 `gemini-flash-latest` so a model retirement cannot break the tool. Pin them with
 `GEMINI_MODEL_PLAN` / `GEMINI_MODEL_PARSE` if you want a fixed version.
+
+### When the deployment misbehaves
+
+`GET /api/health` is the single check for all of this.
+
+**Every route returns a plain `404: NOT_FOUND`.** That is Vercel's own error
+page, not this app's — the app's 404 is ink on newsprint and says *No such
+page*. A plain one means nothing is being served, which almost always means the
+project's **Framework Preset is "Other"**: connect an empty repo to Vercel and
+it detects no framework, runs no build, and serves the bare repository root.
+The preset is sticky, so adding Next.js later does not revisit it.
+
+> Project → Settings → Build & Deployment → Framework Preset → **Next.js** →
+> Save, then Deployments → latest → ⋯ → **Redeploy**.
+
+**The site loads, but Matrix import, planning and Ask all fail with 503.**
+No Gemini key is available. Either set `GEMINI_API_KEY` and redeploy, or paste
+your own key into the prompt the app shows you — that works immediately and
+needs no access to the hosting environment. Canvas `.ics` import keeps working
+throughout either way, because that parser is deterministic and never calls
+Gemini.
+
+**Key added, still 503.** Environment variables do not apply to builds that
+already ran. Redeploy.
+
+**401, "that Gemini API key was rejected".** The key is wrong or incomplete, or
+the Generative Language API is not enabled for it.
 
 ---
 
