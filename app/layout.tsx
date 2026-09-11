@@ -5,7 +5,7 @@ import { Masthead } from "@/components/Masthead";
 export const metadata: Metadata = {
   title: "ORDER — the week you actually have",
   description:
-    "A week-planning instrument for a VMI cadet. Ink is obligation; white space is freedom.",
+    "A week-planning instrument for a VMI cadet. See which hours are actually yours, and what to do in them.",
 };
 
 export const viewport: Viewport = {
@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main>{children}</main>
           <footer className="colophon no-print">
             <div className="wrap" style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", width: "100%" }}>
-              <span>ORDER — ink is obligation, white space is freedom</span>
+              <span>Order — the week you actually have</span>
               <span>Your data stays in this browser</span>
             </div>
           </footer>

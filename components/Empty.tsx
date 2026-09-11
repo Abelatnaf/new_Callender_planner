@@ -13,20 +13,20 @@ export function Empty({
   cta?: { href: string; label: string };
 }) {
   return (
-    <div className="avoid-break" style={{ borderTop: "var(--rule-heavy) solid var(--ink)", paddingTop: "var(--u-4)" }}>
-      <h2 className="display" style={{ fontSize: "var(--t-2xl)", maxWidth: "18ch" }}>{title}</h2>
-      <ol style={{ listStyle: "none", marginTop: "var(--u-3)", maxWidth: "var(--measure)" }}>
+    <div className="avoid-break" style={{ borderTop: "var(--separator-strong) solid var(--label)", paddingTop: "var(--s-8)" }}>
+      <h2 className="display" style={{ fontSize: "var(--t-title2)", maxWidth: "18ch" }}>{title}</h2>
+      <ol style={{ listStyle: "none", marginTop: "var(--s-6)", maxWidth: "var(--measure)" }}>
         {lines.map((l, i) => (
-          <li key={l} style={{ display: "flex", gap: "var(--u-2)", padding: "var(--u) 0", borderBottom: "var(--rule-hair) solid var(--rule-faint)" }}>
-            <span className="num" style={{ fontSize: "1.25rem", width: "2ch", color: "var(--ink-4)" }}>
+          <li key={l} style={{ display: "flex", gap: "var(--s-4)", padding: "var(--s-2) 0", borderBottom: "1px solid var(--separator)" }}>
+            <span className="num" style={{ fontSize: "1.25rem", width: "2ch", color: "var(--label-4)" }}>
               {String(i + 1).padStart(2, "0")}
             </span>
-            <span style={{ fontSize: "var(--t-small)", lineHeight: 1.5 }}>{l}</span>
+            <span style={{ fontSize: "var(--t-sub)", lineHeight: 1.5 }}>{l}</span>
           </li>
         ))}
       </ol>
       {cta && (
-        <Link href={cta.href} className="btn btn--solid" style={{ marginTop: "var(--u-3)" }}>
+        <Link href={cta.href} className="btn btn--solid" style={{ marginTop: "var(--s-6)" }}>
           {cta.label}
         </Link>
       )}

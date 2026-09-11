@@ -119,11 +119,11 @@ export default function SetupPage() {
         <div className="section-head">
           <div>
             <div className="label">Changes once a term, then leave it alone</div>
-            <h1 className="display" style={{ fontSize: "var(--t-3xl)" }}>Semester</h1>
+            <h1 className="display" style={{ fontSize: "var(--t-title1)" }}>Semester</h1>
           </div>
           {vault.term && (
             <div className="tally" style={{ textAlign: "right" }}>
-              <span className="tally__n" style={{ fontSize: "var(--t-xl)" }}>{formatDuration(weeklyClassMin)}</span>
+              <span className="tally__n" style={{ fontSize: "var(--t-title3)" }}>{formatDuration(weeklyClassMin)}</span>
               <span className="tally__l">In class each week</span>
             </div>
           )}
@@ -152,7 +152,7 @@ export default function SetupPage() {
             </label>
             <button
               className="btn"
-              style={{ marginTop: "var(--u)" }}
+              style={{ marginTop: "var(--s-2)" }}
               disabled={busy || !paste.trim()}
               onClick={() => { const f = new FormData(); f.set("text", paste); void importTerm(f); }}
             >
@@ -162,7 +162,7 @@ export default function SetupPage() {
         </div>
 
         {msg && (
-          <div className={`notice${msg.kind === "bad" ? " notice--signal" : ""}`} style={{ marginTop: "var(--u-3)" }}>
+          <div className={`notice${msg.kind === "bad" ? " notice--signal" : ""}`} style={{ marginTop: "var(--s-6)" }}>
             <div className="notice__title">{msg.title}</div>
             {msg.lines.filter(Boolean).map((l) => <div key={l} style={{ marginTop: 2 }}>{l}</div>)}
           </div>
@@ -178,7 +178,7 @@ export default function SetupPage() {
             </div>
           </div>
 
-          <div className="grid-2" style={{ marginBottom: "var(--u-4)" }}>
+          <div className="grid-2" style={{ marginBottom: "var(--s-8)" }}>
             <label className="field">
               <span className="label">Term name</span>
               <input
@@ -187,7 +187,7 @@ export default function SetupPage() {
                 onChange={(e) => api.update((v) => ({ ...v, term: v.term ? { ...v.term, name: e.target.value } : v.term }))}
               />
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--u)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--s-2)" }}>
               <label className="field">
                 <span className="label">First day</span>
                 <input
@@ -206,8 +206,8 @@ export default function SetupPage() {
           </div>
 
           {vault.term.courses.map((course) => (
-            <div key={course.id} className="avoid-break" style={{ borderTop: "var(--rule) solid var(--ink)", paddingBlock: "var(--u-2)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(110px, 1fr) minmax(180px, 2fr) auto", gap: "var(--u)", alignItems: "end" }}>
+            <div key={course.id} className="avoid-break" style={{ borderTop: "var(--separator) solid var(--label)", paddingBlock: "var(--s-4)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(110px, 1fr) minmax(180px, 2fr) auto", gap: "var(--s-2)", alignItems: "end" }}>
                 <label className="field">
                   <span className="label">Code</span>
                   <input className="input" value={course.code} onChange={(e) => patchCourse(course.id, { code: e.target.value })} />
@@ -222,14 +222,14 @@ export default function SetupPage() {
               </div>
 
               {course.meetings.length === 0 && (
-                <div className="notice notice--signal" style={{ marginTop: "var(--u)" }}>
+                <div className="notice notice--signal" style={{ marginTop: "var(--s-2)" }}>
                   <div className="notice__title">No meeting times</div>
                   This course will not block any time until you add when it meets.
                 </div>
               )}
 
               {course.meetings.map((m, i) => (
-                <div key={i} style={{ display: "flex", gap: "var(--u-2)", flexWrap: "wrap", alignItems: "end", marginTop: "var(--u)" }}>
+                <div key={i} style={{ display: "flex", gap: "var(--s-4)", flexWrap: "wrap", alignItems: "end", marginTop: "var(--s-2)" }}>
                   <div>
                     <span className="label" style={{ display: "block", marginBottom: 4 }}>Days</span>
                     <div className="seg">
@@ -293,7 +293,7 @@ function Settings() {
       </div>
 
       {storageFailed && (
-        <div className="notice notice--signal" style={{ marginBottom: "var(--u-3)" }}>
+        <div className="notice notice--signal" style={{ marginBottom: "var(--s-6)" }}>
           <div className="notice__title">Could not save to this browser</div>
           Storage is full or blocked — a private window will do this. Your changes are live on
           screen but will not survive a reload. Export your vault to keep them.
@@ -332,7 +332,7 @@ function Settings() {
         </label>
       </div>
 
-      <div className="toolbar no-print" style={{ marginTop: "var(--u-4)" }}>
+      <div className="toolbar no-print" style={{ marginTop: "var(--s-8)" }}>
         <button className="btn" onClick={api.exportVault}>Export everything</button>
         <label className="btn" style={{ cursor: "pointer" }}>
           Import a vault

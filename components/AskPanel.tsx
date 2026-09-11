@@ -123,7 +123,7 @@ export function AskPanel({
         <div className="ask-panel__body">
           {history.length === 0 && (
             <>
-              <p className="muted" style={{ fontSize: "var(--t-tiny)", marginBottom: "var(--u-2)" }}>
+              <p className="muted" style={{ fontSize: "var(--t-footnote)", marginBottom: "var(--s-4)" }}>
                 Answered against this week&apos;s real schedule — not a general opinion about studying.
               </p>
               <div style={{ display: "grid", gap: 6 }}>

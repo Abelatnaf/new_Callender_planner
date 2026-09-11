@@ -21,7 +21,7 @@ export function KeyGate({ compact = false }: { compact?: boolean }) {
   if (hasKey) {
     if (compact) return null;
     return (
-      <div className="notice" style={{ marginTop: "var(--u-3)" }}>
+      <div className="notice" style={{ marginTop: "var(--s-6)" }}>
         <div className="notice__title">Using your own Gemini key</div>
         This deployment has no server key, so requests use the key stored in this browser
         (…{key.slice(-4)}). It is never written to your vault export.{" "}
@@ -37,9 +37,9 @@ export function KeyGate({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div className="notice notice--signal" style={{ marginTop: "var(--u-3)" }}>
-      <div className="notice__title">A Gemini key is needed</div>
-      <p style={{ marginBottom: "var(--u)" }}>
+    <div className="notice" style={{ marginTop: "var(--s-6)", borderLeft: "3px solid var(--blue)" }}>
+      <div className="notice__title">Add your Gemini key to finish setup</div>
+      <p style={{ marginBottom: "var(--s-2)" }}>
         This deployment has no server key set. Paste your own and everything works — it stays
         in this browser, is sent only to this site&apos;s own API, and is kept out of your
         vault export. Get one free at{" "}
@@ -48,7 +48,7 @@ export function KeyGate({ compact = false }: { compact?: boolean }) {
         </a>.
       </p>
       <form
-        style={{ display: "flex", gap: "var(--u)", flexWrap: "wrap", alignItems: "center" }}
+        style={{ display: "flex", gap: "var(--s-2)", flexWrap: "wrap", alignItems: "center" }}
         onSubmit={(e) => { e.preventDefault(); setKey(draft); setDraft(""); setSaved(true); }}
       >
         <input
@@ -57,7 +57,7 @@ export function KeyGate({ compact = false }: { compact?: boolean }) {
           type="password"
           autoComplete="off"
           spellCheck={false}
-          placeholder="AIza…"
+          placeholder="Paste your Gemini API key"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           aria-label="Gemini API key"

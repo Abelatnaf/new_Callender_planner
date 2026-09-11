@@ -97,10 +97,10 @@ export default function WeekPage() {
             <div className="label">
               {offset === 0 ? "Current week" : offset > 0 ? `${offset} week${offset > 1 ? "s" : ""} ahead` : `${-offset} week${offset < -1 ? "s" : ""} back`}
             </div>
-            <h1 className="display" style={{ fontSize: "var(--t-3xl)" }}>
+            <h1 className="display" style={{ fontSize: "var(--t-title1)" }}>
               Week of {shortDate(monday)}
             </h1>
-            <div className="muted" style={{ fontSize: "var(--t-tiny)", marginTop: 4 }}>
+            <div className="muted" style={{ fontSize: "var(--t-footnote)", marginTop: 4 }}>
               {shortDate(monday)} — {shortDate(weekDates(monday)[6])}
               {matrixWeek?.source && ` · Matrix: ${matrixWeek.source.filename}`}
             </div>
@@ -147,7 +147,7 @@ export default function WeekPage() {
             <KeyGate />
 
             {unconfirmed > 0 && (
-              <div className="notice notice--signal no-print" style={{ marginTop: "var(--u-3)" }}>
+              <div className="notice notice--signal no-print" style={{ marginTop: "var(--s-6)" }}>
                 <div className="notice__title">{unconfirmed} block{unconfirmed > 1 ? "s" : ""} need{unconfirmed > 1 ? "" : "s"} your eyes</div>
                 Gemini was not confident about {unconfirmed === 1 ? "one entry" : "these entries"} in the Matrix,
                 so {unconfirmed === 1 ? "it was" : "they were"} marked mandatory to be safe — which means you may
@@ -157,14 +157,14 @@ export default function WeekPage() {
             )}
 
             {events.length === 0 && (
-              <div className="notice no-print" style={{ marginTop: "var(--u-3)" }}>
+              <div className="notice no-print" style={{ marginTop: "var(--s-6)" }}>
                 <div className="notice__title">No Matrix loaded for this week</div>
                 Only your class schedule is carving up these days, so the free time below is
                 optimistic. <Link href="/intake" style={{ color: "inherit" }}>Load the Matrix →</Link>
               </div>
             )}
 
-            <div className="ribbon-board" style={{ marginTop: "var(--u-4)" }}>
+            <div className="ribbon-board" style={{ marginTop: "var(--s-8)" }}>
               <div className="ribbon-board__inner">
                 <RibbonScale axis={axis} />
                 {inventory.days.map((day, i) => (
@@ -189,7 +189,7 @@ export default function WeekPage() {
 
             <Legend />
 
-            <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: "var(--u-4)" }}>
+            <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: "var(--s-8)" }}>
               <button className="btn btn--solid" onClick={generate} disabled={planning || vault.assignments.length === 0}>
                 {planning ? "Planning…" : plan ? "Re-plan this week" : "Plan this week"}
               </button>
@@ -198,13 +198,13 @@ export default function WeekPage() {
             </div>
 
             {planning && (
-              <p className="working" style={{ marginTop: "var(--u-2)" }}>
+              <p className="working" style={{ marginTop: "var(--s-4)" }}>
                 Reading {inventory.gaps.length} free slots against {vault.assignments.filter((a) => a.status !== "done").length} open assignments
               </p>
             )}
 
             {error && (
-              <div className="notice notice--signal no-print" style={{ marginTop: "var(--u-3)" }}>
+              <div className="notice notice--signal no-print" style={{ marginTop: "var(--s-6)" }}>
                 <div className="notice__title">Could not plan</div>
                 {error}
               </div>
@@ -236,14 +236,14 @@ function Legend() {
     { cls: "", label: "Free" },
   ];
   return (
-    <div style={{ display: "flex", gap: "var(--u-3)", flexWrap: "wrap", marginTop: "var(--u-2)", paddingTop: "var(--u-2)", borderTop: "var(--rule-hair) solid var(--rule-faint)" }}>
+    <div style={{ display: "flex", gap: "var(--s-6)", flexWrap: "wrap", marginTop: "var(--s-4)", paddingTop: "var(--s-4)", borderTop: "1px solid var(--separator)" }}>
       {items.map((it) => (
         <span key={it.label} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
           <span
             className={it.cls ? `bar ${it.cls}` : ""}
             style={{
               position: "static", width: 26, height: 12, flex: "none", padding: 0,
-              border: it.cls ? undefined : "var(--rule-hair) solid var(--rule-faint)",
+              border: it.cls ? undefined : "1px solid var(--separator)",
               background: it.cls ? undefined : "transparent",
               animation: "none",
             }}

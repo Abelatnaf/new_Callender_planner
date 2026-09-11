@@ -1,242 +1,288 @@
 /* ===========================================================================
-   THE RIBBON — the one component this whole application exists to draw.
+   THE RIBBON
 
-   A day is a horizontal strip of time. Four states, no legend needed:
+   A day as a horizontal strip of time, in the language of Apple Calendar and
+   Screen Time: rounded capsules floating on a soft inset track.
 
-     solid ink      imposed on you        formation, class, duty
-     45° hatch      yours but confined    CQ, room-bound study
-     hairline box   you chose this        a placed work block
-     bare paper     free                  the thing we are actually selling
+   The information design is unchanged from the first build — only the surface
+   is new:
 
-   The cadet does not read a calendar and infer their free time. They see it,
-   as the white left on the page.
+     graphite capsule     imposed on you       formation, class, duty
+     tinted + striped     yours but confined   CQ, room-bound study
+     blue capsule         work you chose       a planned block
+     empty track          free                 the thing worth seeing
+
+   Free time is still the visible white space. It just reads as breathing room
+   now rather than bare paper.
    =========================================================================== */
+
+.ribbon-board { min-width: 0; max-width: 100%; overflow-x: auto; }
 
 .ribbon-row {
   display: grid;
-  grid-template-columns: 78px 1fr;
-  align-items: stretch;
-  border-top: var(--rule-hair) solid var(--rule-faint);
+  grid-template-columns: 92px 1fr;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 5px 0;
+  border-radius: var(--r-md);
+  transition: background 0.2s var(--ease);
 }
-.ribbon-row:last-child { border-bottom: var(--rule-hair) solid var(--rule-faint); }
-.ribbon-row--today { background: linear-gradient(to right, var(--signal-wash), transparent 42%); }
+.ribbon-row:hover { background: var(--bg-hover); }
 
-/* --- the day stub, left of the axis ----------------------------------- */
+.ribbon-row--today .ribbon-stub__day { color: var(--blue); }
+.ribbon-row--today .ribbon-stub__date {
+  background: var(--blue);
+  color: var(--on-accent);
+  border-radius: var(--r-pill);
+  padding: 1px 9px;
+  font-weight: 600;
+}
+
+/* --- the day stub ------------------------------------------------------ */
 
 .ribbon-stub {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: var(--u) var(--u-2) var(--u) 0;
-  border-right: var(--rule) solid var(--ink);
+  gap: 2px;
+  padding-left: var(--s-2);
 }
 .ribbon-stub__day {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 0.8125rem;
+  font-size: var(--t-caption);
+  font-weight: 600;
+  color: var(--label-3);
   letter-spacing: 0.02em;
-  text-transform: uppercase;
-  line-height: 1;
 }
 .ribbon-stub__date {
-  font-size: var(--t-micro);
-  color: var(--ink-3);
-  letter-spacing: 0.06em;
-  margin-top: 3px;
+  font-size: var(--t-sub);
+  font-weight: 600;
+  letter-spacing: var(--track-body);
+  align-self: flex-start;
+  font-variant-numeric: tabular-nums;
 }
-.ribbon-row--today .ribbon-stub__day { color: var(--signal); }
 
-/* --- the time axis ----------------------------------------------------- */
+/* --- the track --------------------------------------------------------- */
 
 .ribbon {
   position: relative;
   height: var(--ribbon-h);
-  margin-left: var(--u-2);
-  /* Hour ticks are painted into the ground, not added as elements. */
-  background-image: repeating-linear-gradient(
-    to right,
-    var(--ink-4) 0 var(--rule-hair),
-    transparent var(--rule-hair) var(--hour-w, 5.88%)
-  );
-  background-position: left center;
+  background: var(--bg-sunken);
+  border-radius: var(--r-md);
   overflow: hidden;
 }
-.ribbon--dense { height: var(--ribbon-h-dense); }
+.ribbon--dense { height: var(--ribbon-h-dense); border-radius: var(--r-sm); }
 
-/* --- bars -------------------------------------------------------------- */
+/* Hour gridlines, barely there — structure without noise. */
+.ribbon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--separator) 0 1px,
+    transparent 1px var(--hour-w, 5.88%)
+  );
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* --- capsules ---------------------------------------------------------- */
 
 .bar {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: 4px;
+  bottom: 4px;
   display: flex;
   align-items: center;
-  padding-inline: 5px;
-  min-width: 0;
+  padding-inline: 9px;
+  gap: 6px;
   overflow: hidden;
   white-space: nowrap;
-  font-size: var(--t-micro);
-  letter-spacing: 0.04em;
+  border-radius: var(--r-xs);
+  font-size: var(--t-caption);
+  font-weight: 550;
+  letter-spacing: -0.005em;
+  min-width: 0;
   transform-origin: left center;
 }
+.ribbon--dense .bar { top: 3px; bottom: 3px; padding-inline: 6px; }
 
-/* INK — time taken from you. */
+/* GRAPHITE — time taken from you. Solid and heavy, but not alarming. */
 .bar--ink {
-  background: var(--ink);
-  color: var(--paper);
-  font-weight: 500;
-  text-transform: uppercase;
+  background: var(--graphite);
+  color: #fff;
+  box-shadow: var(--shadow-1);
 }
 
-/* HATCH — yours, but you cannot leave the room. */
+/* TINTED + STRIPED — yours, but you cannot leave the room. */
 .bar--hatch {
-  color: var(--ink-2);
-  text-transform: uppercase;
-  border-block: var(--rule-hair) solid var(--ink-4);
+  background: var(--graphite-soft);
+  color: var(--label-2);
+  border: 1px solid var(--separator);
   background-image: repeating-linear-gradient(
-    var(--hatch-angle),
-    var(--ink-4) 0 var(--rule-hair),
-    transparent var(--rule-hair) 6px
+    -45deg,
+    var(--separator) 0 1px,
+    transparent 1px 7px
   );
 }
 
-/* OUTLINE — time you chose to spend. The only bar you can move. */
+/* BLUE — work you chose to put here. The only bar you can act on. */
 .bar--work {
-  background: var(--paper);
-  border: var(--rule) solid var(--ink);
-  color: var(--ink);
-  font-weight: 500;
-  cursor: grab;
-  transition: background 0.12s var(--ease), color 0.12s var(--ease);
+  background: var(--blue);
+  color: var(--on-accent);
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-blue);
+  font-weight: 600;
+  transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease), filter 0.18s var(--ease);
 }
-.bar--work:hover { background: var(--ink); color: var(--paper); }
-.bar--work:active { cursor: grabbing; }
-.bar--work.is-locked { border-width: var(--rule-heavy); }
+.bar--work:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: var(--shadow-2), var(--shadow-blue); }
+.bar--work:active { transform: scale(0.98); }
+.bar--work.is-locked { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5), var(--shadow-blue); }
 
 /* A block whose deadline is inside 48 hours. */
-.bar--work.is-urgent { border-color: var(--signal); color: var(--signal); }
-.bar--work.is-urgent:hover { background: var(--signal); color: var(--signal-ink); }
+.bar--work.is-urgent { background: var(--red); box-shadow: 0 4px 14px rgba(255, 59, 48, 0.3); }
+.bar--work.is-urgent:hover { box-shadow: var(--shadow-2), 0 4px 14px rgba(255, 59, 48, 0.3); }
 
-/* The tick that marks a classification the model made rather than the cadet.
-   Present so a wrong call is visible before it costs something. */
-.bar--ai::before {
+/* Marks a classification the model made rather than the cadet, so a wrong call
+   stays visible before it costs anything.
+
+   Absolutely positioned on purpose: as a flex item this dot consumed label
+   width and truncated "BRC" to "B." — a marker that hides the thing it marks
+   is worse than no marker. */
+.bar--ai::after {
   content: "";
   position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: repeating-linear-gradient(to bottom, currentColor 0 2px, transparent 2px 4px);
-  opacity: 0.9;
+  top: 3px;
+  right: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+  pointer-events: none;
 }
+/* On a bar too narrow to hold a label, the dot would sit on top of the text. */
+.bar--tight::after { display: none; }
 
-.bar__label { overflow: hidden; text-overflow: ellipsis; }
+.bar__label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.bar__time { margin-left: auto; padding-left: 8px; opacity: 0.72; font-variant-numeric: tabular-nums; font-weight: 500; }
 
-/* A 50-minute class is a ~60px sliver. Tracking and padding are the difference
-   between "CHEM 141" and "CHEM ...", and the course code is the whole point of
-   the label, so narrow bars give up their breathing room to keep it whole. */
-.bar--tight { padding-inline: 2px; letter-spacing: 0; }
-.bar--tight .bar__label { font-size: 0.6875rem; }
-.bar__time { margin-left: auto; padding-left: 6px; opacity: 0.7; font-size: 0.625rem; }
+/* Narrow capsules give up their breathing room to keep the label whole. A
+   30-minute formation is a ~38px capsule; "BRC" only fits if the padding and
+   the type both step down. */
+.bar--tight {
+  padding-inline: 3px;
+  gap: 0;
+  font-size: 0.6875rem;
+  letter-spacing: -0.02em;
+  justify-content: center;
+}
+.bar--tight .bar__time { display: none; }
 
-/* Below this width a label is a smear; the day pages carry the detail. */
 @media (max-width: 900px) {
   .bar__time { display: none; }
 }
 
-/* --- free gaps: invisible until you ask -------------------------------- */
+/* --- free gaps --------------------------------------------------------- */
 
 .gap {
   position: absolute;
-  top: 0; bottom: 0;
+  top: 4px; bottom: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: default;
+  border-radius: var(--r-xs);
+  transition: background 0.2s var(--ease);
 }
 .gap::after {
   content: attr(data-duration);
-  font-family: var(--font-display);
-  font-weight: 900;
   font-size: 0.625rem;
-  letter-spacing: 0.02em;
-  color: var(--ink-3);
+  font-weight: 600;
+  color: var(--label-3);
   opacity: 0;
-  transition: opacity 0.15s var(--ease);
+  transition: opacity 0.2s var(--ease);
 }
+.gap:hover { background: var(--blue-soft); }
 .gap:hover::after { opacity: 1; }
-.gap:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
 
 /* --- now line ---------------------------------------------------------- */
 
 .ribbon__now {
   position: absolute;
-  top: -2px; bottom: -2px;
-  width: var(--rule);
-  background: var(--signal);
+  top: 0; bottom: 0;
+  width: 2px;
+  background: var(--red);
+  border-radius: 2px;
   pointer-events: none;
   z-index: 3;
 }
 .ribbon__now::before {
   content: "";
   position: absolute;
-  top: -1px; left: -2px;
-  width: 5px; height: 5px;
-  background: var(--signal);
+  top: -3px; left: -3px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--red);
 }
 
-/* --- the hour scale above the ribbons ---------------------------------- */
+/* --- the hour scale ---------------------------------------------------- */
 
 .ribbon-scale {
   display: grid;
-  grid-template-columns: 78px 1fr;
-  border-bottom: var(--rule) solid var(--ink);
+  grid-template-columns: 92px 1fr;
+  gap: var(--s-3);
+  margin-bottom: var(--s-1);
 }
-.ribbon-scale__track { position: relative; height: 18px; margin-left: var(--u-2); }
+.ribbon-scale__track { position: relative; height: 16px; }
 .ribbon-scale__tick {
   position: absolute;
   top: 0;
   font-size: 0.625rem;
-  letter-spacing: 0.06em;
-  color: var(--ink-3);
+  font-weight: 500;
+  color: var(--label-4);
+  font-variant-numeric: tabular-nums;
   transform: translateX(-50%);
 }
 .ribbon-scale__tick:first-child { transform: none; }
 
-/* --- load meter: one rule, length = committed minutes ------------------ */
+/* --- load meter -------------------------------------------------------- */
 
 .meter {
   position: relative;
-  height: 3px;
-  background: var(--paper-3);
+  height: 4px;
+  background: var(--separator);
+  border-radius: var(--r-pill);
   margin-top: 5px;
+  overflow: hidden;
 }
-.meter__fill { position: absolute; inset-block: 0; left: 0; background: var(--ink); }
-.meter__fill.is-over { background: var(--signal); }
-.meter__cap {
+.meter__fill {
   position: absolute;
-  top: -2px; bottom: -2px;
-  width: var(--rule);
-  background: var(--ink-3);
+  inset-block: 0;
+  left: 0;
+  background: var(--blue);
+  border-radius: var(--r-pill);
+  transition: width 0.5s var(--ease-out);
 }
+.meter__fill.is-over { background: var(--orange); }
+.meter__cap { display: none; }
 
-/* --- entrance: the week draws itself in, left to right ------------------ */
+/* --- entrance ---------------------------------------------------------- */
 
 @media (prefers-reduced-motion: no-preference) {
   .ribbon .bar {
-    animation: draw 0.42s var(--ease) both;
-    animation-delay: calc(var(--row, 0) * 55ms + var(--i, 0) * 14ms);
+    animation: pop 0.45s var(--ease-out) both;
+    animation-delay: calc(var(--row, 0) * 45ms + var(--i, 0) * 12ms);
   }
-  @keyframes draw {
-    from { transform: scaleX(0); opacity: 0; }
-    to   { transform: scaleX(1); opacity: 1; }
+  @keyframes pop {
+    from { opacity: 0; transform: scaleX(0.82); }
+    to   { opacity: 1; transform: scaleX(1); }
   }
 }
 
 /* --- narrow screens ---------------------------------------------------- */
 
-.ribbon-board { --hour-w: 5.88%; min-width: 0; max-width: 100%; }
-
 @media (max-width: 760px) {
-  .ribbon-board { overflow-x: auto; }
-  .ribbon-board__inner { min-width: 640px; }
-  .ribbon-row, .ribbon-scale { grid-template-columns: 62px 1fr; }
+  .ribbon-board { padding-bottom: var(--s-2); }
+  .ribbon-board__inner { min-width: 620px; }
+  .ribbon-row, .ribbon-scale { grid-template-columns: 72px 1fr; }
 }

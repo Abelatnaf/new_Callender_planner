@@ -14,10 +14,10 @@ export default function NotFound() {
     <div className="wrap">
       <section className="section">
         <div className="label">Error 404</div>
-        <h1 className="display" style={{ fontSize: "var(--t-3xl)", maxWidth: "16ch" }}>
+        <h1 className="display" style={{ fontSize: "var(--t-title1)", maxWidth: "16ch" }}>
           No such page
         </h1>
-        <p className="prose" style={{ marginTop: "var(--u-3)" }}>
+        <p className="prose" style={{ marginTop: "var(--s-6)" }}>
           The route you asked for does not exist. The application itself is running — if you
           were expecting a page here, the link is wrong rather than the deployment.
         </p>
@@ -25,9 +25,9 @@ export default function NotFound() {
         <div
           style={{
             display: "flex",
-            gap: "var(--u)",
+            gap: "var(--s-2)",
             flexWrap: "wrap",
-            marginTop: "var(--u-4)",
+            marginTop: "var(--s-8)",
           }}
         >
           <Link className="btn btn--solid" href="/">The week</Link>

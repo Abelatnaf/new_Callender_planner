@@ -122,7 +122,7 @@ export default function IntakePage() {
         <div className="section-head">
           <div>
             <div className="label">Do this once a week</div>
-            <h1 className="display" style={{ fontSize: "var(--t-3xl)" }}>Intake</h1>
+            <h1 className="display" style={{ fontSize: "var(--t-title1)" }}>Intake</h1>
           </div>
           <div className="toolbar no-print">
             <button className="btn btn--sm" onClick={() => setOffset((o) => o - 1)}>←</button>
@@ -160,7 +160,7 @@ export default function IntakePage() {
         </div>
 
         {!vault.term && (
-          <div className="notice" style={{ marginTop: "var(--u-3)" }}>
+          <div className="notice" style={{ marginTop: "var(--s-6)" }}>
             <div className="notice__title">No semester schedule yet</div>
             Your classes are not carving up these days, so free time will read high.{" "}
             <Link href="/setup" style={{ color: "inherit" }}>Load the semester →</Link>
@@ -174,7 +174,7 @@ export default function IntakePage() {
             <h2>{needsReview.length === 1 ? "Confirm this one" : `Confirm these ${needsReview.length}`}</h2>
             <span className="label">Gemini was unsure — it chose the safe answer</span>
           </div>
-          <p className="prose" style={{ marginBottom: "var(--u-3)" }}>
+          <p className="prose" style={{ marginBottom: "var(--s-6)" }}>
             Anything the model could not classify confidently was marked mandatory, because
             sending you to the library during a formation is a worse mistake than losing an
             hour of study time. Correct any of these and the week re-opens.
@@ -208,7 +208,7 @@ export default function IntakePage() {
                     <td>
                       <AvailabilityTag value={e.availability} />
                     </td>
-                    <td className="muted" style={{ fontSize: "var(--t-micro)" }}>
+                    <td className="muted" style={{ fontSize: "var(--t-caption)" }}>
                       {e.confirmedByUser ? "you" : `gemini ${Math.round(e.confidence * 100)}%`}
                     </td>
                   </tr>
@@ -216,7 +216,7 @@ export default function IntakePage() {
               </tbody>
             </table>
           </div>
-          <div className="toolbar no-print" style={{ marginTop: "var(--u-3)" }}>
+          <div className="toolbar no-print" style={{ marginTop: "var(--s-6)" }}>
             <Link className="btn btn--solid" href="/">See the week →</Link>
           </div>
         </section>
@@ -271,7 +271,7 @@ function AvailabilityTag({ value }: { value: Availability }) {
     <span
       className="label"
       style={{
-        color: value === "BLOCKED" ? "var(--ink)" : "var(--ink-3)",
+        color: value === "BLOCKED" ? "var(--label)" : "var(--label-3)",
         fontWeight: value === "BLOCKED" ? 700 : 400,
       }}
     >
@@ -283,7 +283,7 @@ function AvailabilityTag({ value }: { value: Availability }) {
 function Note({ msg }: { msg: Feedback }) {
   if (!msg) return null;
   return (
-    <div className={`notice${msg.kind === "bad" ? " notice--signal" : ""}`} style={{ marginTop: "var(--u-2)" }}>
+    <div className={`notice${msg.kind === "bad" ? " notice--signal" : ""}`} style={{ marginTop: "var(--s-4)" }}>
       <div className="notice__title">{msg.title}</div>
       {msg.lines.filter(Boolean).map((l) => <div key={l} style={{ marginTop: 2 }}>{l}</div>)}
     </div>
