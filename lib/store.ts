@@ -216,6 +216,30 @@ export function weekFor(vault: Vault, weekStartDate: string): MatrixWeek | null 
   return vault.matrixWeeks.find((w) => w.weekStart === weekStartDate) ?? null;
 }
 
+/** The Mondays that actually carry an imported Matrix, earliest first. */
+export function importedWeekStarts(vault: Vault): string[] {
+  return vault.matrixWeeks.map((w) => w.weekStart).sort();
+}
+
+/**
+ * The week a screen should open on.
+ *
+ * Today's week when a Matrix covers it. Otherwise the imported week nearest to
+ * today, preferring one still ahead: the Matrix is published before the week it
+ * describes, so a cadet who imports Friday for next week means next week. The
+ * old behaviour - always today's Monday - rendered seven immaculate empty pages
+ * whenever the imported week was not the current one, with nothing on screen to
+ * say why.
+ */
+export function bestWeekStart(vault: Vault): string {
+  const today = currentWeekStart(vault);
+  const starts = importedWeekStarts(vault);
+  if (starts.length === 0 || starts.includes(today)) return today;
+
+  const upcoming = starts.find((s) => s > today);
+  return upcoming ?? starts[starts.length - 1];
+}
+
 export function planFor(vault: Vault, weekStartDate: string): Plan | null {
   return vault.plans.find((p) => p.weekStart === weekStartDate) ?? null;
 }

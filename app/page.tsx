@@ -18,12 +18,12 @@ import { Briefing } from "@/components/Briefing";
 import { Hero } from "@/components/Hero";
 import { IntakeStatus } from "@/components/IntakeStatus";
 import { BlockSheet } from "@/components/BlockSheet";
-import { useVault, planFor, weekFor, currentWeekStart } from "@/lib/store";
+import { useVault, planFor, weekFor, currentWeekStart, bestWeekStart } from "@/lib/store";
 import { buildWeekInventory, labeledMeetingsOn } from "@/lib/gaps";
 import { auditPlan } from "@/lib/validate";
 import { buildCourseHues, isOverdue } from "@/lib/layout";
 import {
-  addDays, formatDuration, instantToLocal, shortDate, stamp, todayLocal, weekDates, weekStart,
+  addDays, formatDuration, instantToLocal, shortDate, stamp, todayLocal, weekDates,
 } from "@/lib/time";
 import type { Plan, WorkBlock } from "@/lib/schemas";
 
@@ -38,10 +38,11 @@ export default function WeekPage() {
 
   const tz = vault.settings.timezone;
   const today = todayLocal(tz);
-  const monday = useMemo(
-    () => addDays(weekStart(today), offset * 7),
-    [today, offset],
-  );
+  // Open on a week that has a Matrix rather than blindly on today's - see
+  // bestWeekStart. Opening on an uncovered week showed an empty ribbon with
+  // nothing to explain it.
+  const base = bestWeekStart(vault);
+  const monday = useMemo(() => addDays(base, offset * 7), [base, offset]);
 
   const matrixWeek = weekFor(vault, monday);
   const plan = planFor(vault, monday);
