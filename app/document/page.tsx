@@ -14,19 +14,28 @@ import { IntakeStatus } from "@/components/IntakeStatus";
 import { buildDocument } from "@/lib/document";
 import { buildWeekInventory } from "@/lib/gaps";
 import { buildCourseHues } from "@/lib/layout";
-import { planFor, useVault, weekFor } from "@/lib/store";
+import { bestWeekStart, importedWeekStarts, planFor, useVault, weekFor } from "@/lib/store";
 import { auditPlan } from "@/lib/validate";
-import { addDays, shortDate, todayLocal, weekDates, weekStart } from "@/lib/time";
+import { addDays, shortDate, weekDates } from "@/lib/time";
+
+/** Whole weeks from one Monday to another. Parsed as UTC so DST cannot skew it. */
+function weeksBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 604_800_000);
+}
 
 export default function DocumentPage() {
   const { vault: v, ready } = useVault();
   const [offset, setOffset] = useState(0);
 
-  const tz = v.settings.timezone;
-  const monday = useMemo(() => addDays(weekStart(todayLocal(tz)), offset * 7), [tz, offset]);
+  // Open on a week that has a Matrix, not blindly on today's. A cadet imports
+  // next week's Matrix on Friday; opening on today would print seven empty
+  // pages and say nothing about why.
+  const base = bestWeekStart(v);
+  const monday = useMemo(() => addDays(base, offset * 7), [base, offset]);
 
   const week = weekFor(v, monday);
   const plan = planFor(v, monday);
+  const imported = importedWeekStarts(v);
 
   const model = useMemo(
     () => buildDocument({
@@ -65,6 +74,33 @@ export default function DocumentPage() {
         </div>
 
         <IntakeStatus vault={v} weekStart={monday} compact />
+
+        {!week && (
+          <div className="notice notice--signal" style={{ marginTop: "var(--s-6)" }} role="alert">
+            <div className="notice__title">No Matrix imported for this week</div>
+            {imported.length === 0 ? (
+              <>
+                Nothing has been imported yet, so these pages are the empty form.{" "}
+                <Link href="/intake" style={{ color: "inherit" }}>Import the Matrix →</Link>
+              </>
+            ) : (
+              <>
+                The pages below are blank because no Matrix covers{" "}
+                {shortDate(monday)} – {shortDate(weekDates(monday)[6])}. Imported:{" "}
+                {imported.map((s) => (
+                  <button
+                    key={s}
+                    className="btn btn--sm"
+                    style={{ marginInlineEnd: "var(--s-2)" }}
+                    onClick={() => setOffset(weeksBetween(base, s))}
+                  >
+                    {shortDate(s)}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
 
         {problems.length > 0 && (
           <div className="notice notice--signal" style={{ marginTop: "var(--s-6)" }} role="alert">
