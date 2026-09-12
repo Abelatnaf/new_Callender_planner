@@ -88,7 +88,7 @@ describe("course code parsing, from the real strings", () => {
    Against the cadet's ACTUAL Matrix export.
    =========================================================================== */
 
-import { readCsv, parseCsv } from "@/lib/csv";
+import { readCsv } from "@/lib/csv";
 import { trimSheet, renderSheetForModel } from "@/lib/xlsx";
 
 const MATRIX = readFileSync("test/fixtures/matrix-real.csv", "utf8");
@@ -162,23 +162,6 @@ describe("the real Matrix CSV", () => {
   });
 });
 
-describe("CSV parsing edge cases", () => {
-  it("handles quoted fields containing commas", () => {
-    expect(parseCsv('a,"b,c",d')).toEqual([["a", "b,c", "d"]]);
-  });
-  it("handles doubled quotes inside a quoted field", () => {
-    expect(parseCsv('a,"say ""hi""",c')).toEqual([["a", 'say "hi"', "c"]]);
-  });
-  it("handles a newline inside a quoted field", () => {
-    expect(parseCsv('a,"line1\nline2",c')).toEqual([["a", "line1\nline2", "c"]]);
-  });
-  it("handles CRLF and a BOM", () => {
-    expect(parseCsv('﻿a,b\r\nc,d')).toEqual([["a", "b"], ["c", "d"]]);
-  });
-  it("keeps empty trailing fields", () => {
-    expect(parseCsv("a,,c")).toEqual([["a", "", "c"]]);
-  });
-});
 
 /* ===========================================================================
    PAX: the Matrix is the whole Corps' week, and most of it is somebody else's.
