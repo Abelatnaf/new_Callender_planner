@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { classifyContent, looksLikeCalendar, looksLikeMatrix, routeTo, SNIFF_BYTES } from "@/lib/detect";
+import { classifyContent, compact, looksLikeCalendar, looksLikeMatrix, routeTo, SNIFF_BYTES } from "@/lib/detect";
 
 const head = (p: string) => readFileSync(p, "utf8").slice(0, SNIFF_BYTES);
 const REAL_ICS = head("test/fixtures/canvas-real.ics");
@@ -109,5 +109,70 @@ describe("the Matrix signature does not fire on ordinary schedules", () => {
   it("accepts the header however it is quoted or spaced", () => {
     expect(looksLikeMatrix('"Time","PAX","Event","Location"')).toBe(true);
     expect(looksLikeMatrix("Time\tPAX\tEvent\tLocation")).toBe(true);
+  });
+});
+
+
+/* ===========================================================================
+   The shape of the REAL export, which the committed fixture does not have.
+
+   The fixture is a trimmed three-day slice whose header lands in the first few
+   hundred bytes. The actual file pads every row to 16,380 columns, so its
+   header sits at byte 33,007 — four times past the old 8KB sniff window — and
+   detection could never fire on it while every test here passed.
+   =========================================================================== */
+
+/** A Matrix padded the way a spreadsheet export pads it. */
+function fullWidthMatrix(columns = 16_380): string {
+  const pad = (cells: string[]) => cells.concat(Array(Math.max(0, columns - cells.length)).fill("")).join(",");
+  return [
+    pad(["", "", "Week 03   Mon 07 Sep  - Sun 13 Sep 2026", "", "", "Final Revised", "", "", "BASBALL", "BKBALL", "FB"]),
+    pad(['"Monday, September 7, 2026"', "", "BV Labor Day Parade (Pipe Band)"]),
+    pad(["Time", "PAX", "Event", "Location", "Uniform", "Instructor"]),
+    pad(["0700", "Old Corps", "BRC", "Bricks", "Class Dyke", "RCO"]),
+  ].join("\n");
+}
+
+describe("a Matrix as wide as the real one", () => {
+  const wide = fullWidthMatrix();
+
+  it("is far past the old 8KB window", () => {
+    expect(wide.indexOf("PAX")).toBeGreaterThan(30_000);
+  });
+
+  it("is still recognised", () => {
+    expect(looksLikeMatrix(wide.slice(0, SNIFF_BYTES))).toBe(true);
+  });
+
+  it("routes to the Matrix wherever it is dropped", () => {
+    const d = classifyContent({ name: "Matrix.csv", type: "text/csv", head: wide.slice(0, SNIFF_BYTES) });
+    expect(d.destination).toBe("matrix");
+    expect(routeTo(d, "canvas")).toMatchObject({ destination: "matrix", moved: true });
+  });
+
+  it("would have failed on the window this bug shipped with", () => {
+    // The guard itself: if someone shrinks SNIFF_BYTES back, this is what breaks.
+    expect(looksLikeMatrix(wide.slice(0, 8192))).toBe(false);
+    expect(SNIFF_BYTES).toBeGreaterThan(33_007);
+  });
+});
+
+describe("compact", () => {
+  it("squeezes a run of padding commas down to one", () => {
+    expect(compact("a,,,,,,,,b")).toBe("a,b");
+  });
+
+  it("leaves a single delimiter alone, so real empty cells survive matching", () => {
+    expect(compact("a,b,c")).toBe("a,b,c");
+  });
+
+  it("works on tabs and semicolons too", () => {
+    expect(compact("a\t\t\t\tb")).toBe("a\tb");
+    expect(compact("a;;;;b")).toBe("a;b");
+  });
+
+  it("shrinks a padded row by orders of magnitude", () => {
+    const row = "Time,PAX,Event" + ",".repeat(16_000);
+    expect(compact(row).length).toBeLessThan(row.length / 100);
   });
 });

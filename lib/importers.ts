@@ -146,7 +146,11 @@ export async function importMatrix(
       const wb = readCsv(text, file.name);
       if (wb.sheets.length === 0) throw new Error("That CSV appears to be empty.");
       const cellsBefore = wb.sheets.reduce((t, sh) => t + sh.cells.length, 0);
-      const grid = renderWorkbookForModel(wb);
+      // A cadet with no team cannot act on twelve columns of per-sport
+      // attendance, and on the real file they are 55% of the payload.
+      const grid = renderWorkbookForModel(wb, {
+        dropSportColumns: opts.cadet.athletics === "none",
+      });
       // renderWorkbookForModel trims as it renders, so the honest "after" count
       // is what survived into the text the model will actually see.
       const cellsAfter = grid.split("\n").reduce((t, line) => t + line.split("\t").filter(Boolean).length, 0);

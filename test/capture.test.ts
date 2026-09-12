@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { toMatrixWeek } from "@/lib/convert";
 import { readCsv } from "@/lib/csv";
-import { renderWorkbookForModel } from "@/lib/grid";
+import { renderWorkbookForModel, sportColumns } from "@/lib/grid";
 import { MatrixWeekSchema, type GeminiMatrixResponse } from "@/lib/schemas";
 import { mx } from "./fixtures/gemini";
 
@@ -164,5 +164,59 @@ describe("the browser trims exactly what the server would have", () => {
     const rendered = renderWorkbookForModel(readCsv(raw, "matrix-real.csv"));
     expect(rendered).toMatch(/Location/);
     expect(rendered).toMatch(/Uniform/);
+  });
+});
+
+/* ===========================================================================
+   The per-sport attendance block.
+
+   Twelve columns of Attend / Excused / With Team, on every row. On the real
+   2.4MB export they are 55% of everything sent to the model, and a cadet with
+   no team can act on none of it.
+   =========================================================================== */
+
+describe("the sport columns", () => {
+  const wb = () => readCsv(readFileSync("test/fixtures/matrix-real.csv", "utf8"), "m.csv");
+
+  it("are found by their codes, not by position", () => {
+    expect(sportColumns(wb().sheets[0]).size).toBeGreaterThanOrEqual(3);
+  });
+
+  it("are dropped for a cadet with no team", () => {
+    const kept = renderWorkbookForModel(wb());
+    const dropped = renderWorkbookForModel(wb(), { dropSportColumns: true });
+    expect(dropped.length).toBeLessThan(kept.length);
+    expect(dropped).not.toMatch(/BASBALL|MWRIFLE|WWPOLO/);
+  });
+
+  it("are kept for a cadet who has one", () => {
+    // Same columns, opposite value: for an NCAA athlete they are the schedule.
+    expect(renderWorkbookForModel(wb(), { dropSportColumns: false })).toMatch(/BASBALL|MWRIFLE/);
+  });
+
+  it("take the schedule with them under no circumstances", () => {
+    const dropped = renderWorkbookForModel(wb(), { dropSportColumns: true });
+    for (const day of ["Monday, September 7", "Tuesday, September 8", "Wednesday, September 9"]) {
+      expect(dropped).toContain(day);
+    }
+    expect(dropped).toMatch(/Location/);
+    expect(dropped).toMatch(/Uniform/);
+    expect(dropped).toMatch(/Corps PT/);
+    expect(dropped).toMatch(/BRC/);
+  });
+
+  it("leave a row as its six real columns", () => {
+    const row = renderWorkbookForModel(wb(), { dropSportColumns: true })
+      .split("\n")
+      .find((l) => /Corps PT/.test(l))!;
+    expect(row).toMatch(/Corps PT/);
+    expect(row).toMatch(/Gym Dyke/);
+    expect(row).not.toMatch(/Excused/);
+  });
+
+  it("does nothing to a sheet that has no such block", () => {
+    const plain = readCsv("Time,PAX,Event\n0700,Corps,BRC\n", "x.csv");
+    expect(renderWorkbookForModel(plain, { dropSportColumns: true }))
+      .toBe(renderWorkbookForModel(plain));
   });
 });
