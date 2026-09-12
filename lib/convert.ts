@@ -57,6 +57,8 @@ export function toMatrixWeek(
   response: GeminiMatrixResponse,
   filename: string,
   fallbackWeekStart?: LocalDate,
+  /** What the deterministic pass did before the model saw anything. */
+  trim?: { cellsBefore: number; cellsAfter: number; model: string },
 ): MatrixConversion {
   const warnings: string[] = [];
 
@@ -74,6 +76,8 @@ export function toMatrixWeek(
 
   const events: MatrixEvent[] = [];
   let ratchetedCount = 0;
+  let skipped = 0;
+  let endsEstimated = 0;
 
   for (const [i, raw] of response.events.entries()) {
     let startMin: number;
@@ -83,6 +87,7 @@ export function toMatrixWeek(
       endMin = toMinutes(raw.end);
     } catch {
       warnings.push(`Skipped "${raw.title}" - could not read its times (${raw.start}-${raw.end}).`);
+      skipped++;
       continue;
     }
 
@@ -91,7 +96,8 @@ export function toMatrixWeek(
     if (endMin <= startMin) {
       if (endMin === startMin) {
         warnings.push(`"${raw.title}" had zero length; skipped.`);
-        continue;
+        skipped++;
+      continue;
       }
       warnings.push(`"${raw.title}" ended before it started; clamped to end of day.`);
       endMin = 24 * 60;
@@ -100,6 +106,7 @@ export function toMatrixWeek(
     const offset = DAY_INDEX[raw.day];
     if (offset === undefined) {
       warnings.push(`Skipped "${raw.title}" - unrecognized day "${raw.day}".`);
+      skipped++;
       continue;
     }
 
@@ -107,6 +114,7 @@ export function toMatrixWeek(
       raw.availability, raw.confidence, raw.appliesToMe,
     );
     if (ratcheted) ratchetedCount++;
+    if (raw.endEstimated) endsEstimated++;
 
     events.push({
       id: `MX-${monday}-${String(i + 1).padStart(3, "0")}`,
@@ -118,6 +126,9 @@ export function toMatrixWeek(
       kind: raw.kind,
       availability,
       pax: raw.pax ?? "",
+      location: (raw.location ?? "").trim(),
+      uniform: (raw.uniform ?? "").trim(),
+      endEstimated: raw.endEstimated ?? false,
       appliesToMe,
       confidence: raw.confidence,
       note: raw.note,
@@ -138,6 +149,17 @@ export function toMatrixWeek(
       weekStart: monday,
       events,
       source: { filename, importedAt: new Date().toISOString() },
+      audit: {
+        rowsReturned: response.events.length,
+        rowsKept: events.length,
+        rowsSkipped: skipped,
+        notMine: events.filter((e) => e.appliesToMe === false).length,
+        ratcheted: ratchetedCount,
+        endsEstimated,
+        cellsBefore: trim?.cellsBefore ?? 0,
+        cellsAfter: trim?.cellsAfter ?? 0,
+        model: trim?.model ?? "",
+      },
     },
     ratchetedCount,
     lowConfidence: events.filter((e) => e.confidence < CONFIDENCE_FLOOR || e.ratcheted),

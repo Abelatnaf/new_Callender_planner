@@ -1,19 +1,63 @@
 /**
  * Gemini access. Server-side only - the API key must never reach the browser.
  *
- * Model ids are read from the environment with floating-alias defaults, so a
- * model retirement cannot silently break the app for someone who is not
- * maintaining it. Override GEMINI_MODEL_PARSE / GEMINI_MODEL_PLAN to pin.
+ * Every call walks a *chain* of models rather than asking for one. The reason
+ * is quota, not redundancy: a free AI Studio key has no allowance at all on
+ * some models, and the floating `-latest` aliases track whichever preview is
+ * newest, which is exactly the kind of model a free key is most often locked
+ * out of. Being told "RESOURCE_EXHAUSTED" on the very first request of the day
+ * is not a rate limit - it is the wrong model for that key. So the chain ends
+ * on models with a long-standing, generous free tier, and a quota refusal
+ * moves to the next one immediately.
+ *
+ * Override GEMINI_MODEL_PARSE / GEMINI_MODEL_PLAN to change the first choice,
+ * or GEMINI_MODELS_PARSE / GEMINI_MODELS_PLAN (comma-separated) to replace a
+ * whole chain.
  */
 import { GoogleGenAI } from "@google/genai";
 import type { ZodType } from "zod";
 import { z } from "zod";
 
-export const MODELS = {
+/**
+ * Fallbacks, in order of preference after the first choice.
+ *
+ * `gemini-2.5-flash` and `gemini-2.0-flash` are here because they are stable
+ * ids with a free tier that has outlived several model generations. They are
+ * the floor the app lands on when everything newer is refused.
+ */
+const PARSE_FALLBACKS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite"];
+const PLAN_FALLBACKS = ["gemini-2.5-flash", "gemini-2.0-flash"];
+
+function chain(single: string | undefined, list: string | undefined, first: string, rest: string[]): string[] {
+  if (list?.trim()) {
+    const explicit = list.split(",").map((s) => s.trim()).filter(Boolean);
+    if (explicit.length) return explicit;
+  }
+  const head = single?.trim() || first;
+  return [head, ...rest.filter((m) => m !== head)];
+}
+
+export const MODEL_CHAINS = {
   /** Grid and document extraction: cheap, fast, high volume. */
-  parse: process.env.GEMINI_MODEL_PARSE || "gemini-flash-latest",
+  parse: chain(
+    process.env.GEMINI_MODEL_PARSE,
+    process.env.GEMINI_MODELS_PARSE,
+    "gemini-flash-latest",
+    PARSE_FALLBACKS,
+  ),
   /** Planning and briefing: the reasoning actually matters here. */
-  plan: process.env.GEMINI_MODEL_PLAN || "gemini-pro-latest",
+  plan: chain(
+    process.env.GEMINI_MODEL_PLAN,
+    process.env.GEMINI_MODELS_PLAN,
+    "gemini-pro-latest",
+    PLAN_FALLBACKS,
+  ),
+} as const;
+
+/** The first choice in each chain, for display. */
+export const MODELS = {
+  parse: MODEL_CHAINS.parse[0],
+  plan: MODEL_CHAINS.plan[0],
 } as const;
 
 export class MissingKeyError extends Error {
@@ -30,6 +74,23 @@ export class ModelError extends Error {
   constructor(message: string, readonly cause?: unknown) {
     super(message);
     this.name = "ModelError";
+  }
+}
+
+/**
+ * Every model in the chain refused on quota.
+ *
+ * Carries what was tried and how long Google asked us to wait, so the person
+ * reading the message learns something they can act on rather than "try again".
+ */
+export class QuotaError extends Error {
+  constructor(
+    readonly tried: string[],
+    readonly retryAfterSec: number | null,
+    readonly detail?: string,
+  ) {
+    super("every available Gemini model refused this request on quota");
+    this.name = "QuotaError";
   }
 }
 
@@ -56,6 +117,58 @@ export function getClient(callerKey?: string): GoogleGenAI {
 export function hasKey(): boolean {
   return Boolean(process.env.GEMINI_API_KEY);
 }
+
+/* ------------------------------------------------------- failure taxonomy */
+
+export type Failure = "quota" | "missing_model" | "transient" | "bad_key" | "fatal";
+
+/**
+ * What kind of failure this is, and therefore what to do about it.
+ *
+ * The distinction that matters is quota versus transient. A 503 means the
+ * model is busy and waiting helps. A 429 means this key's allowance for *this
+ * model* is spent, and waiting two seconds cannot help - only a different
+ * model, or a much longer wait, can. Treating them the same is what turns one
+ * failed upload into three wasted requests against an already-empty quota.
+ */
+export function classify(err: unknown): Failure {
+  const message = err instanceof Error ? err.message : String(err);
+  if (/API[_ ]KEY[_ ]INVALID|API key not valid|PERMISSION_DENIED|UNAUTHENTICATED/i.test(message)) {
+    return "bad_key";
+  }
+  if (/RESOURCE_EXHAUSTED|\b429\b|quota|rate limit/i.test(message)) return "quota";
+  if (/NOT_FOUND|\b404\b|is not found for API version|not supported for generateContent/i.test(message)) {
+    return "missing_model";
+  }
+  if (/\b(500|502|503|504)\b|UNAVAILABLE|DEADLINE_EXCEEDED|overloaded|INTERNAL|ECONNRESET|fetch failed/i.test(message)) {
+    return "transient";
+  }
+  return "fatal";
+}
+
+/**
+ * Google's RetryInfo, in seconds, when it says how long to wait.
+ *
+ * It arrives inside the error message as JSON (`"retryDelay": "27s"`), so it is
+ * read out of the text rather than a typed field - the SDK does not surface it.
+ */
+export function retryAfterSeconds(err: unknown): number | null {
+  const message = err instanceof Error ? err.message : String(err);
+  const m = /"?retryDelay"?\s*[:=]\s*"?(\d+(?:\.\d+)?)s/i.exec(message);
+  if (m) return Math.ceil(Number(m[1]));
+  return null;
+}
+
+/**
+ * Longest we will sit on a request waiting for a per-minute quota to roll over.
+ *
+ * Kept well under the routes' 60s maxDuration: a Matrix parse can itself take
+ * twenty seconds, and a wait that pushes the request into a platform timeout
+ * costs the cadet the upload it was trying to save.
+ */
+const MAX_QUOTA_WAIT_SEC = 15;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /* --------------------------------------------------------------- schemas */
 
@@ -104,7 +217,8 @@ export type Part =
   | { inlineData: { mimeType: string; data: string } };
 
 export type StructuredRequest<T> = {
-  model?: string;
+  /** The chain to walk. Defaults to the parse chain. */
+  models?: readonly string[];
   system: string;
   parts: Part[];
   schema: ZodType<T>;
@@ -115,69 +229,114 @@ export type StructuredRequest<T> = {
   apiKey?: string;
 };
 
-const TRANSIENT = /\b(429|500|502|503|504|UNAVAILABLE|RESOURCE_EXHAUSTED|DEADLINE_EXCEEDED|overloaded)\b/i;
+/** What came back, and which model actually produced it. */
+export type Structured<T> = { value: T; model: string; fellBack: boolean };
 
 /**
  * One structured call, validated against the zod schema before it is returned.
  *
- * Retries only transient failures. A schema violation is not retried blindly -
- * it is surfaced, because silently re-rolling a malformed plan hides the fact
- * that the model is not doing what was asked.
+ * Walks the chain. A quota refusal or an unknown model moves on at once; a
+ * transient failure is retried on the same model, since waiting is exactly what
+ * helps there. A schema violation is surfaced rather than re-rolled - silently
+ * retrying a malformed plan hides the fact that the model is not doing what was
+ * asked.
+ *
+ * If the whole chain is quota-blocked and Google told us how long to wait, we
+ * wait once - but only if the wait is short enough to fit inside the request.
  */
-export async function generateStructured<T>(req: StructuredRequest<T>): Promise<T> {
+export async function generateStructured<T>(req: StructuredRequest<T>): Promise<Structured<T>> {
   const ai = getClient(req.apiKey);
-  const model = req.model ?? MODELS.parse;
+  const models = req.models?.length ? [...req.models] : [...MODEL_CHAINS.parse];
   const responseJsonSchema = toGeminiSchema(req.schema);
 
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, 2 ** attempt * 750));
-    }
+  const call = async (model: string): Promise<T> => {
+    const result = await ai.models.generateContent({
+      model,
+      contents: [{ role: "user", parts: req.parts }],
+      config: {
+        systemInstruction: req.system,
+        responseMimeType: "application/json",
+        responseJsonSchema,
+        temperature: req.temperature ?? 0.1,
+        maxOutputTokens: req.maxOutputTokens ?? 32_768,
+      },
+    });
+
+    const text = result.text;
+    if (!text) throw new ModelError("the model returned an empty response");
+
+    let json: unknown;
     try {
-      const result = await ai.models.generateContent({
-        model,
-        contents: [{ role: "user", parts: req.parts }],
-        config: {
-          systemInstruction: req.system,
-          responseMimeType: "application/json",
-          responseJsonSchema,
-          temperature: req.temperature ?? 0.1,
-          maxOutputTokens: req.maxOutputTokens ?? 32_768,
-        },
-      });
-
-      const text = result.text;
-      if (!text) throw new ModelError("the model returned an empty response");
-
-      let json: unknown;
-      try {
-        json = JSON.parse(text);
-      } catch {
-        // Structured output should make this impossible, but a truncated
-        // response is worth a clear message rather than a JSON stack trace.
-        throw new ModelError(
-          "the model's response was not valid JSON - it may have been cut off by the token limit",
-        );
-      }
-
-      const parsed = req.schema.safeParse(json);
-      if (!parsed.success) {
-        throw new ModelError(
-          `the model's response did not match the expected shape: ${parsed.error.issues
-            .slice(0, 4)
-            .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-            .join("; ")}`,
-        );
-      }
-      return parsed.data;
-    } catch (err) {
-      lastError = err;
-      const message = err instanceof Error ? err.message : String(err);
-      if (!TRANSIENT.test(message)) break;
+      json = JSON.parse(text);
+    } catch {
+      // Structured output should make this impossible, but a truncated
+      // response is worth a clear message rather than a JSON stack trace.
+      throw new ModelError(
+        "the model's response was not valid JSON - it may have been cut off by the token limit",
+      );
     }
+
+    const parsed = req.schema.safeParse(json);
+    if (!parsed.success) {
+      throw new ModelError(
+        `the model's response did not match the expected shape: ${parsed.error.issues
+          .slice(0, 4)
+          .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+          .join("; ")}`,
+      );
+    }
+    return parsed.data;
+  };
+
+  const quotaBlocked: string[] = [];
+  let suggestedWait: number | null = null;
+  let lastError: unknown;
+
+  const walk = async (): Promise<Structured<T> | null> => {
+    for (const [index, model] of models.entries()) {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return { value: await call(model), model, fellBack: index > 0 };
+        } catch (err) {
+          lastError = err;
+          const kind = classify(err);
+
+          if (kind === "quota") {
+            if (!quotaBlocked.includes(model)) quotaBlocked.push(model);
+            const wait = retryAfterSeconds(err);
+            if (wait !== null && (suggestedWait === null || wait < suggestedWait)) suggestedWait = wait;
+            break; // this model's allowance is spent; another second will not restore it
+          }
+          if (kind === "missing_model") break; // the id is wrong or retired; try the next
+          if (kind === "bad_key" || kind === "fatal") return null; // no model will fix either
+          if (attempt >= 1) break; // transient, twice - give the next model a turn
+          await sleep(700 * 2 ** attempt);
+        }
+      }
+    }
+    return null;
+  };
+
+  const first = await walk();
+  if (first) return first;
+
+  // Everything refused. If the only reason was quota and the wait is short
+  // enough to sit inside this request, take it once - a per-minute limit that
+  // rolls over in fifteen seconds should not cost the cadet the upload.
+  const everyFailureWasQuota = quotaBlocked.length === models.length;
+  if (everyFailureWasQuota && suggestedWait !== null && suggestedWait <= MAX_QUOTA_WAIT_SEC) {
+    await sleep((suggestedWait + 1) * 1000);
+    const second = await walk();
+    if (second) return second;
   }
 
+  if (quotaBlocked.length > 0 && classify(lastError) === "quota") {
+    throw new QuotaError(
+      quotaBlocked,
+      suggestedWait,
+      lastError instanceof Error ? lastError.message : undefined,
+    );
+  }
   if (lastError instanceof ModelError || lastError instanceof MissingKeyError) throw lastError;
   throw new ModelError(
     lastError instanceof Error ? lastError.message : "the model call failed",
@@ -185,30 +344,53 @@ export async function generateStructured<T>(req: StructuredRequest<T>): Promise<
   );
 }
 
-/** Free-form streaming, for the ask panel. */
+/** Free-form streaming, for the ask panel. Walks the plan chain the same way. */
 export async function streamText(opts: {
-  model?: string;
+  models?: readonly string[];
   system: string;
   history: Array<{ role: "user" | "model"; text: string }>;
   temperature?: number;
   apiKey?: string;
 }): Promise<AsyncGenerator<string>> {
   const ai = getClient(opts.apiKey);
-  const stream = await ai.models.generateContentStream({
-    model: opts.model ?? MODELS.plan,
-    contents: opts.history.map((m) => ({ role: m.role, parts: [{ text: m.text }] })),
-    config: {
-      systemInstruction: opts.system,
-      temperature: opts.temperature ?? 0.4,
-      maxOutputTokens: 4096,
-    },
-  });
+  const models = opts.models?.length ? [...opts.models] : [...MODEL_CHAINS.plan];
 
-  async function* iterate() {
-    for await (const chunk of stream) {
-      const t = chunk.text;
-      if (t) yield t;
+  const quotaBlocked: string[] = [];
+  let suggestedWait: number | null = null;
+  let lastError: unknown;
+
+  for (const model of models) {
+    try {
+      const stream = await ai.models.generateContentStream({
+        model,
+        contents: opts.history.map((m) => ({ role: m.role, parts: [{ text: m.text }] })),
+        config: {
+          systemInstruction: opts.system,
+          temperature: opts.temperature ?? 0.4,
+          maxOutputTokens: 4096,
+        },
+      });
+      async function* iterate() {
+        for await (const chunk of stream) {
+          const t = chunk.text;
+          if (t) yield t;
+        }
+      }
+      return iterate();
+    } catch (err) {
+      lastError = err;
+      const kind = classify(err);
+      if (kind === "bad_key" || kind === "fatal") break;
+      if (kind === "quota") {
+        quotaBlocked.push(model);
+        const wait = retryAfterSeconds(err);
+        if (wait !== null && (suggestedWait === null || wait < suggestedWait)) suggestedWait = wait;
+      }
     }
   }
-  return iterate();
+
+  if (quotaBlocked.length > 0 && classify(lastError) === "quota") {
+    throw new QuotaError(quotaBlocked, suggestedWait, lastError instanceof Error ? lastError.message : undefined);
+  }
+  throw lastError instanceof Error ? lastError : new ModelError("the model call failed");
 }

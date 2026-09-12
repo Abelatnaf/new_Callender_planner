@@ -231,7 +231,10 @@
 .chip__tick { font-weight: 800; flex: none; }
 
 .chip.is-locked { box-shadow: 0 0 0 2px var(--ink), 0 2px 10px rgba(0, 0, 0, 0.45); }
-.chip.is-urgent { --chip: var(--alert); color: #fff; box-shadow: 0 0 18px -2px var(--alert-glow); }
+/* --alert is tuned to be seen against black; as a fill behind white text it
+   only reaches 3.2:1. The solid variant is the same red, deep enough to carry
+   a label. The glow stays the bright one, because a glow is not text. */
+.chip.is-urgent { --chip: var(--alert-solid); color: #fff; box-shadow: 0 0 18px -2px var(--alert-glow); }
 
 .chip__label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .chip__time { margin-left: auto; padding-left: 7px; opacity: 0.75; font-variant-numeric: tabular-nums; font-weight: 600; }
@@ -267,7 +270,7 @@
   top: 0;
   font-size: 0.625rem;
   font-weight: 500;
-  color: var(--ink-4);
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
   transform: translateX(-50%);
 }

@@ -10,13 +10,14 @@
  */
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { Dropzone } from "@/components/Dropzone";
+import { ANY_FILE, Dropzone } from "@/components/Dropzone";
+import { IntakeStatus } from "@/components/IntakeStatus";
 import { KeyGate } from "@/components/KeyGate";
-import { keyHeaders } from "@/lib/apikey";
+import { detectFile, routeTo } from "@/lib/detect";
+import { describeStage, importCanvas, importMatrix } from "@/lib/importers";
 import { useVault, weekFor } from "@/lib/store";
-import { parseIcs, mergeAssignments } from "@/lib/ics";
 import { CONFIDENCE_FLOOR } from "@/lib/convert";
-import type { Availability, MatrixEvent, MatrixWeek } from "@/lib/schemas";
+import type { Availability, MatrixEvent } from "@/lib/schemas";
 import { addDays, formatDuration, hhmm, shortDate, todayLocal, weekDates, weekStart } from "@/lib/time";
 
 type Feedback = { kind: "ok" | "warn" | "bad"; title: string; lines: string[] } | null;
@@ -29,6 +30,7 @@ export default function IntakePage() {
   const [icsBusy, setIcsBusy] = useState(false);
   const [matrixMsg, setMatrixMsg] = useState<Feedback>(null);
   const [icsMsg, setIcsMsg] = useState<Feedback>(null);
+  const [progress, setProgress] = useState<string | null>(null);
 
   const monday = useMemo(
     () => addDays(weekStart(todayLocal(vault.settings.timezone)), offset * 7),
@@ -36,74 +38,71 @@ export default function IntakePage() {
   );
   const week = weekFor(vault, monday);
 
-  const uploadMatrix = useCallback(async (file: File) => {
+  /**
+   * One entry point for both boxes.
+   *
+   * The file says where it belongs whenever it can — a Canvas feed dropped on
+   * the Matrix box is still a Canvas feed — and the box only decides what the
+   * file leaves genuinely ambiguous. Anything rerouted says so, so a wrong
+   * guess is visible rather than silent.
+   */
+  const handleDrop = useCallback(async (file: File, zone: "matrix" | "canvas") => {
+    const detection = await detectFile(file);
+    const { destination, moved, because } = routeTo(detection, zone);
+    const prefix = moved
+      ? [`You dropped this on the ${zone === "matrix" ? "Matrix" : "Canvas"} box, but ${because} — so it was read as ${destination === "canvas" ? "your Canvas assignments" : "the Matrix"}.`]
+      : [];
+    const withPrefix = (r: Feedback): Feedback =>
+      r && prefix.length ? { ...r, lines: [...prefix, ...r.lines] } : r;
+
+    if (destination === "canvas") {
+      setIcsBusy(true);
+      setIcsMsg(null);
+      try {
+        const { report, assignments } = importCanvas(
+          await file.text(), vault.assignments, vault.settings.timezone,
+        );
+        if (assignments) api.setAssignments(assignments, { fromCanvas: true });
+        setIcsMsg(withPrefix(report));
+      } finally {
+        setIcsBusy(false);
+      }
+      return;
+    }
+
+    // A file that named itself has already been honoured above. What is left
+    // here is a file that could be anything — a screenshot, a PDF — dropped on
+    // the box that only ever wants a calendar. Naming what arrived beats
+    // failing inside an .ics parser that was handed an image.
+    if (zone === "canvas" && detection.destination === null) {
+      setIcsMsg({
+        kind: "bad",
+        title: "That is not a Canvas feed",
+        lines: [
+          `It looks like ${because.replace(/^it is /, "")}. Canvas → Calendar → Calendar Feed gives you a .ics file.`,
+          "If it is the Matrix, use the box on the left. If it is your semester schedule, it belongs on the Semester page.",
+        ],
+      });
+      return;
+    }
+
     setMatrixBusy(true);
     setMatrixMsg(null);
+    setProgress(null);
     try {
-      const form = new FormData();
-      form.set("file", file);
-      form.set("weekStart", monday);
-      form.set("timezone", vault.settings.timezone);
-      form.set("cadet", JSON.stringify(vault.settings.cadet));
-      const res = await fetch("/api/parse/matrix", {
-        method: "POST", body: form, headers: keyHeaders(),
+      const { report, week } = await importMatrix(file, {
+        weekStart: monday,
+        timezone: vault.settings.timezone,
+        cadet: vault.settings.cadet,
+        onProgress: (stage, detail) => setProgress(describeStage(stage, detail)),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not read that file.");
-
-      const parsed = data.week as MatrixWeek;
-      api.upsertMatrixWeek(parsed);
-
-      const mine = parsed.events.filter((e) => e.appliesToMe !== false);
-      const blocked = mine.filter((e) => e.availability === "BLOCKED").length;
-      setMatrixMsg({
-        kind: data.ratchetedCount > 0 ? "warn" : "ok",
-        title: `Read ${parsed.events.length} events for the week of ${shortDate(parsed.weekStart)}`,
-        lines: [
-          `${mine.length} apply to you — ${blocked} mandatory, ${mine.length - blocked} usable.`,
-          ...(data.notMine > 0
-            ? [`${data.notMine} belong to other companies, classes or the Band — kept for reference, but they do not take your time.`]
-            : []),
-          ...(data.ratchetedCount > 0
-            ? [`${data.ratchetedCount} were marked mandatory because Gemini was not confident. Review them below — you may have more free time than shown.`]
-            : []),
-          ...(data.warnings ?? []),
-        ],
-      });
-    } catch (e) {
-      setMatrixMsg({ kind: "bad", title: "Matrix import failed", lines: [e instanceof Error ? e.message : "Unknown error."] });
+      if (week) api.upsertMatrixWeek(week);
+      setMatrixMsg(withPrefix(report));
     } finally {
       setMatrixBusy(false);
+      setProgress(null);
     }
-  }, [api, monday, vault.settings.timezone]);
-
-  const uploadIcs = useCallback(async (file: File) => {
-    setIcsBusy(true);
-    setIcsMsg(null);
-    try {
-      const text = await file.text();
-      const { assignments, skipped, calendarName } = parseIcs(text, vault.settings.timezone);
-      if (assignments.length === 0) {
-        throw new Error("No assignments found. Is this the Canvas Calendar Feed .ics?");
-      }
-      const { merged, added, updated, removed } = mergeAssignments(vault.assignments, assignments);
-      api.setAssignments(merged);
-      setIcsMsg({
-        kind: "ok",
-        title: `${merged.length} assignments on the books`,
-        lines: [
-          `${added} new, ${updated} with changed deadlines, ${removed} no longer in Canvas.`,
-          "Your statuses, estimates and manual entries were preserved.",
-          ...(calendarName ? [`Feed: ${calendarName}`] : []),
-          ...(skipped ? [`${skipped} entries had no usable date and were skipped.`] : []),
-        ],
-      });
-    } catch (e) {
-      setIcsMsg({ kind: "bad", title: "Canvas import failed", lines: [e instanceof Error ? e.message : "Unknown error."] });
-    } finally {
-      setIcsBusy(false);
-    }
-  }, [api, vault.assignments, vault.settings.timezone]);
+  }, [api, monday, vault.assignments, vault.settings.cadet, vault.settings.timezone]);
 
   const setAvailability = useCallback((eventId: string, availability: Availability) => {
     if (!week) return;
@@ -138,27 +137,34 @@ export default function IntakePage() {
 
         <KeyGate />
 
-        <div className="grid-2">
+        <IntakeStatus vault={vault} weekStart={monday} />
+
+        <div className="grid-2" style={{ marginTop: "var(--s-6)" }}>
           <div>
             <Dropzone
               title="Drop the Matrix"
-              hint="CSV · Excel · PDF — the weekly master schedule"
-              accept=".csv,.tsv,.xlsx,.xls,.xlsm,.pdf,text/csv,application/pdf"
+              hint="CSV · Excel · PDF · screenshot — or drop any of the three files here"
+              accept={ANY_FILE}
               busy={matrixBusy}
               loaded={week?.source?.filename ?? null}
-              onFile={uploadMatrix}
+              onFile={(f) => void handleDrop(f, "matrix")}
             />
+            {progress && (
+              <div className="notice" role="status" aria-live="polite" style={{ marginTop: "var(--s-4)" }}>
+                <span className="working">{progress}</span>
+              </div>
+            )}
             <Note msg={matrixMsg} />
           </div>
 
           <div>
             <Dropzone
               title="Drop Canvas .ics"
-              hint="Canvas → Calendar → Calendar Feed → download"
-              accept=".ics,text/calendar"
+              hint="Canvas → Calendar → Calendar Feed → download the .ics"
+              accept={ANY_FILE}
               busy={icsBusy}
               loaded={vault.assignments.length ? `${vault.assignments.length} assignments loaded` : null}
-              onFile={uploadIcs}
+              onFile={(f) => void handleDrop(f, "canvas")}
             />
             <Note msg={icsMsg} />
           </div>

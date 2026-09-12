@@ -8,12 +8,16 @@
  * changing terms must never require touching code.
  */
 import { useCallback, useState } from "react";
-import { Dropzone } from "@/components/Dropzone";
+import { ANY_FILE, Dropzone } from "@/components/Dropzone";
+import { IntakeStatus } from "@/components/IntakeStatus";
 import { KeyGate } from "@/components/KeyGate";
-import { keyHeaders } from "@/lib/apikey";
+import { detectFile, routeTo } from "@/lib/detect";
+import { type Report, describeStage, importCanvas, importMatrix, importTerm } from "@/lib/importers";
 import { useVault } from "@/lib/store";
 import type { Course, Term } from "@/lib/schemas";
-import { WEEKDAYS, type Weekday, formatDuration, hcolonmm, toMinutes } from "@/lib/time";
+import {
+  WEEKDAYS, type Weekday, formatDuration, hcolonmm, toMinutes, todayLocal, weekStart,
+} from "@/lib/time";
 
 const DAY_LABELS: Record<Weekday, string> = {
   SU: "Su", MO: "M", TU: "T", WE: "W", TH: "Th", FR: "F", SA: "Sa",
@@ -23,35 +27,83 @@ export default function SetupPage() {
   const api = useVault();
   const { vault, ready } = api;
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ kind: "ok" | "bad"; title: string; lines: string[] } | null>(null);
+  const [msg, setMsg] = useState<Report | null>(null);
   const [paste, setPaste] = useState("");
+  const [progress, setProgress] = useState<string | null>(null);
 
-  const importTerm = useCallback(async (payload: FormData) => {
+  const runTerm = useCallback(async (payload: FormData) => {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/parse/term", {
-        method: "POST", body: payload, headers: keyHeaders(),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not read that.");
-      const term = data.term as Term;
-      api.setTerm(term);
-      setPaste("");
-      setMsg({
-        kind: "ok",
-        title: `${term.name}: ${term.courses.length} courses`,
-        lines: [
-          "Check the meeting times below before you rely on them.",
-          ...(data.warnings ?? []),
-        ],
-      });
-    } catch (e) {
-      setMsg({ kind: "bad", title: "Import failed", lines: [e instanceof Error ? e.message : "Unknown error."] });
+      const { report, term } = await importTerm(payload, (stage, detail) =>
+        setProgress(describeStage(stage, detail)),
+      );
+      if (term) {
+        api.setTerm(term);
+        setPaste("");
+      }
+      setMsg(report);
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }, [api]);
+
+  /**
+   * This box takes all three files, not just the semester schedule.
+   *
+   * A cadet with three files and one visible drop zone will use the drop zone.
+   * Refusing the other two on a technicality — the wrong `accept` string — is a
+   * dead end they have no way to diagnose, so the file is read and routed to
+   * whichever importer it actually belongs to.
+   */
+  const handleDrop = useCallback(async (file: File) => {
+    const detection = await detectFile(file);
+    const { destination, moved, because } = routeTo(detection, "term");
+
+    if (destination === "term") {
+      const form = new FormData();
+      form.set("file", file);
+      await runTerm(form);
+      return;
+    }
+
+    setBusy(true);
+    setMsg(null);
+    try {
+      const prefix = moved
+        ? [`This is not a semester schedule — ${because} — so it was read as ${destination === "canvas" ? "your Canvas assignments" : "the Matrix"} instead.`]
+        : [];
+
+      if (destination === "canvas") {
+        const { report, assignments } = importCanvas(
+          await file.text(), vault.assignments, vault.settings.timezone,
+        );
+        if (assignments) api.setAssignments(assignments, { fromCanvas: true });
+        setMsg({ ...report, lines: [...prefix, ...report.lines] });
+        return;
+      }
+
+      // The Matrix is a weekly document and this page has no week picker, so it
+      // lands on the current one — the same default /intake opens with.
+      const monday = weekStart(todayLocal(vault.settings.timezone));
+      const { report, week } = await importMatrix(file, {
+        weekStart: monday,
+        timezone: vault.settings.timezone,
+        cadet: vault.settings.cadet,
+        onProgress: (stage, detail) => setProgress(describeStage(stage, detail)),
+      });
+      if (week) api.upsertMatrixWeek(week);
+      setMsg({
+        ...report,
+        // Only point at Intake when there is something there to look at.
+        lines: [...prefix, ...report.lines, ...(week ? ["Review it on the Intake page →"] : [])],
+      });
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
+  }, [api, runTerm, vault.assignments, vault.settings.cadet, vault.settings.timezone]);
 
   const patchCourse = useCallback((id: string, patch: Partial<Course>) => {
     if (!vault.term) return;
@@ -131,14 +183,16 @@ export default function SetupPage() {
 
         <KeyGate />
 
-        <div className="grid-2">
+        <IntakeStatus vault={vault} weekStart={weekStart(todayLocal(vault.settings.timezone))} />
+
+        <div className="grid-2" style={{ marginTop: "var(--s-6)" }}>
           <Dropzone
             title="Drop your schedule"
-            hint="Screenshot · PDF · Excel · CSV — or paste it below"
-            accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp,.pdf,.xlsx,.xls,.xlsm,.csv,.txt,application/pdf"
+            hint="Screenshot · PDF · Excel · CSV — the Matrix and Canvas .ics work here too"
+            accept={ANY_FILE}
             busy={busy}
             loaded={vault.term?.source?.filename ?? null}
-            onFile={(file) => { const f = new FormData(); f.set("file", file); void importTerm(f); }}
+            onFile={(file) => void handleDrop(file)}
           />
           <div>
             <label className="field">
@@ -154,12 +208,18 @@ export default function SetupPage() {
               className="btn"
               style={{ marginTop: "var(--s-2)" }}
               disabled={busy || !paste.trim()}
-              onClick={() => { const f = new FormData(); f.set("text", paste); void importTerm(f); }}
+              onClick={() => { const f = new FormData(); f.set("text", paste); void runTerm(f); }}
             >
               Read pasted schedule
             </button>
           </div>
         </div>
+
+        {progress && (
+          <div className="notice" role="status" aria-live="polite" style={{ marginTop: "var(--s-6)" }}>
+            <span className="working">{progress}</span>
+          </div>
+        )}
 
         {msg && (
           <div className={`notice${msg.kind === "bad" ? " notice--signal" : ""}`} style={{ marginTop: "var(--s-6)" }}>
@@ -284,6 +344,8 @@ function Settings() {
   const api = useVault();
   const { vault, storageFailed } = api;
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  // Off by default: an export is a file people email themselves.
+  const [carryKey, setCarryKey] = useState(false);
 
   return (
     <section className="section">
@@ -390,7 +452,16 @@ function Settings() {
       </div>
 
       <div className="toolbar no-print" style={{ marginTop: "var(--s-8)" }}>
-        <button className="btn" onClick={api.exportVault}>Export everything</button>
+        <button className="btn" onClick={() => api.exportVault({ includeKey: carryKey })}>
+          Export everything
+        </button>
+        <label
+          className="label"
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+        >
+          <input type="checkbox" checked={carryKey} onChange={(e) => setCarryKey(e.target.checked)} />
+          Include my Gemini key
+        </label>
         <label className="btn" style={{ cursor: "pointer" }}>
           Import a vault
           <input
@@ -399,7 +470,13 @@ function Settings() {
               const f = e.target.files?.[0];
               if (!f) return;
               const r = await api.importVault(f);
-              setImportMsg(r.ok ? "Imported." : r.error ?? "Import failed.");
+              setImportMsg(
+                r.ok
+                  ? r.keyRestored
+                    ? "Imported, Gemini key included."
+                    : "Imported."
+                  : r.error ?? "Import failed.",
+              );
               e.target.value = "";
             }}
           />

@@ -8,7 +8,7 @@
  */
 import { NextRequest } from "next/server";
 import { callerKey, fail, handleError, imageMime, isCsv, isImage, isPdf, isSpreadsheet, readUpload } from "@/lib/api";
-import { MODELS, generateStructured } from "@/lib/gemini";
+import { MODEL_CHAINS, generateStructured } from "@/lib/gemini";
 import { TERM_SYSTEM } from "@/lib/prompts";
 import { GeminiTermResponseSchema } from "@/lib/schemas";
 import { toTerm } from "@/lib/convert";
@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
       return fail("Upload a file or paste your schedule text.", 400, "no_input");
     }
 
-    const response = await generateStructured({
-      model: MODELS.parse,
+    const { value: response, model, fellBack } = await generateStructured({
+      models: MODEL_CHAINS.parse,
       system: TERM_SYSTEM,
       parts,
       schema: GeminiTermResponseSchema,
@@ -71,7 +71,13 @@ export async function POST(request: NextRequest) {
     });
 
     const { term, warnings } = toTerm(response, filename);
-    return Response.json({ term, warnings, model: MODELS.parse });
+    return Response.json({
+      term,
+      model,
+      warnings: fellBack
+        ? [...warnings, `Read by ${model} - the preferred model was out of quota for this key.`]
+        : warnings,
+    });
   } catch (err) {
     return handleError(err);
   }

@@ -28,11 +28,17 @@ export function parseCsv(text: string): string[][] {
       if (ch === '"') {
         if (src[i + 1] === '"') { field += '"'; i++; }   // escaped quote
         else quoted = false;
-      } else field += ch;
+      } else if (ch !== "\r") field += ch;              // CRLF inside a quoted field
       continue;
     }
 
-    if (ch === '"') { quoted = true; continue; }
+    // A quote only OPENS a field when the field is still empty. Anywhere else
+    // it is a literal character - the same tolerance Excel and Python's csv
+    // module apply outside strict mode. Treating every quote as an opener made
+    // `Drill,6" gun,Parade Ground` collapse into two cells with the quote
+    // dropped, and because the Matrix's columns are positional, every field
+    // after it shifted: Location, Uniform and Instructor folded into Event.
+    if (ch === '"' && field === "") { quoted = true; continue; }
     if (ch === ",") { row.push(field); field = ""; continue; }
     if (ch === "\r") continue;
     if (ch === "\n") { row.push(field); rows.push(row); row = []; field = ""; continue; }

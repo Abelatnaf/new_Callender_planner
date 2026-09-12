@@ -4,6 +4,7 @@ import ExcelJS from "exceljs";
 import { parseIcs, mergeAssignments } from "@/lib/ics";
 import { readWorkbook, renderWorkbookForModel } from "@/lib/xlsx";
 import { toMatrixWeek } from "@/lib/convert";
+import { type MxInput, mx } from "./fixtures/gemini";
 import { buildWeekInventory } from "@/lib/gaps";
 import { materializePlan, auditPlan } from "@/lib/validate";
 import { SettingsSchema, VaultSchema, type GeminiMatrixResponse, type GeminiPlanResponse, type Term } from "@/lib/schemas";
@@ -141,9 +142,9 @@ describe("end to end", () => {
     expect(rendered).toContain("MON");
 
     // 2. What Gemini would return for that grid, through the real ratchet.
-    const modelMatrix: GeminiMatrixResponse = {
-      weekStartDate: MONDAY,
-      events: [
+    // Annotated rather than inferred: the annotation is what keeps the day
+    // and kind literals narrow, and therefore what keeps them checked.
+    const matrixRows: MxInput[] = [
         ...(["MO","TU","WE","TH","FR"] as const).flatMap((day) => [
           { title: "BRC", raw: "BRC", day, start: "06:30", end: "07:00", kind: "formation" as const, availability: "BLOCKED" as const, confidence: 0.98, pax: "Corps", appliesToMe: true },
           { title: "DRC", raw: "DRC", day, start: "12:10", end: "12:40", kind: "formation" as const, availability: "BLOCKED" as const, confidence: 0.98, pax: "Corps", appliesToMe: true },
@@ -161,8 +162,12 @@ describe("end to end", () => {
         })),
         // One the model is unsure about: the ratchet must force it to BLOCKED.
         { title: "Unit Function", raw: "UNIT FUNC?", day: "FR", start: "19:00", end: "21:00", kind: "other", availability: "USABLE", confidence: 0.42, pax: "Select Cadets", appliesToMe: true, note: "Cell text was ambiguous." },
-      ],
+      ];
+    const modelMatrix: GeminiMatrixResponse = {
+      weekStartDate: MONDAY,
+      events: matrixRows.map(mx),
     };
+
     const { week, ratchetedCount } = toMatrixWeek(modelMatrix, "MATRIX_WK03.xlsx", MONDAY);
     expect(ratchetedCount).toBe(1);
     expect(week.events.find((e) => e.title === "Unit Function")?.availability).toBe("BLOCKED");
