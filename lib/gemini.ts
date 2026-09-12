@@ -225,6 +225,17 @@ export type StructuredRequest<T> = {
   /** Lower for extraction, higher for the briefing's prose. */
   temperature?: number;
   maxOutputTokens?: number;
+  /**
+   * Tokens the model may spend thinking before it answers.
+   *
+   * 0 turns it off. Gemini 2.5-era models think by default, which is right for
+   * planning a week and wrong for copying a spreadsheet cell into a field:
+   * extraction gains nothing from deliberation and pays for all of it in
+   * latency. A 9KB grid was timing out past 55 seconds with it left on.
+   *
+   * Undefined leaves the model's own default alone.
+   */
+  thinkingBudget?: number;
   /** Used only when the server has no key of its own. Never persisted. */
   apiKey?: string;
 };
@@ -259,6 +270,9 @@ export async function generateStructured<T>(req: StructuredRequest<T>): Promise<
         responseJsonSchema,
         temperature: req.temperature ?? 0.1,
         maxOutputTokens: req.maxOutputTokens ?? 32_768,
+        ...(req.thinkingBudget === undefined
+          ? {}
+          : { thinkingConfig: { thinkingBudget: req.thinkingBudget } }),
       },
     });
 

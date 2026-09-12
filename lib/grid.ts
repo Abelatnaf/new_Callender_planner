@@ -251,3 +251,51 @@ export function renderWorkbookForModel(wb: WorkbookGrid, opts: RenderOptions = {
 function range(from: number, to: number): number[] {
   return Array.from({ length: Math.max(0, to - from + 1) }, (_, i) => from + i);
 }
+
+
+/* ------------------------------------------------------- splitting by day */
+
+/** Weekday names as the Matrix writes its section headings. */
+const DAY_HEADING =
+  /^(?:\d+\t)?\s*"?(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/i;
+
+export type DaySection = {
+  /** "Monday" — as written in the document. */
+  weekday: string;
+  /** The whole heading line, which carries the date. */
+  heading: string;
+  /** The section's lines, heading included. */
+  text: string;
+};
+
+/**
+ * Cut the rendered grid into one chunk per day.
+ *
+ * Asking for a whole week in one call means one reply carrying a hundred-odd
+ * events: slow, because output tokens are what latency is made of, and
+ * all-or-nothing, because one malformed row loses the other six days with it.
+ * The document is already organised as stacked day sections, so the natural
+ * seam is right there — seven chunks of under 2KB each.
+ *
+ * Anything above the first heading (the week title, the sport codes) is
+ * returned separately so every chunk can carry it as context.
+ */
+export function splitByDay(grid: string): { preamble: string; days: DaySection[] } {
+  const lines = grid.split("\n");
+  const starts: number[] = [];
+  for (const [i, line] of lines.entries()) if (DAY_HEADING.test(line)) starts.push(i);
+
+  if (starts.length === 0) return { preamble: "", days: [] };
+
+  const days: DaySection[] = starts.map((start, k) => {
+    const end = k + 1 < starts.length ? starts[k + 1] : lines.length;
+    const heading = lines[start];
+    return {
+      weekday: (DAY_HEADING.exec(heading)?.[1] ?? "").replace(/^./, (c) => c.toUpperCase()),
+      heading: heading.trim(),
+      text: lines.slice(start, end).join("\n"),
+    };
+  });
+
+  return { preamble: lines.slice(0, starts[0]).join("\n"), days };
+}

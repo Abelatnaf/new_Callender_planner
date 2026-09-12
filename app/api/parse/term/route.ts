@@ -82,6 +82,8 @@ export async function POST(request: NextRequest) {
       parts,
       schema: GeminiTermResponseSchema,
       temperature: 0,
+      // Copying cells into fields; deliberation buys nothing here.
+      thinkingBudget: 0,
       apiKey: callerKey(request),
     });
 
