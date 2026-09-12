@@ -23,8 +23,33 @@ export type Detection = {
   because: string;
 };
 
-/** How much of the file to look at. Enough for a header block, cheap on a 2.4MB Matrix. */
-export const SNIFF_BYTES = 8192;
+/**
+ * How much of the file to look at.
+ *
+ * 8KB was not enough and the failure was invisible: the real Matrix pads every
+ * row out to 16,380 columns, so row 0 alone is 16,492 bytes and the
+ * `Time | PAX | Event` header does not appear until byte 33,007. Detection
+ * could never fire on the actual file, only on the trimmed fixture in this
+ * repo — which is exactly the kind of gap a fixture is supposed to close
+ * rather than hide.
+ *
+ * Reading half a megabyte of a local file costs nothing, and `compact()` below
+ * means this window covers hundreds of logical rows rather than half of one.
+ */
+export const SNIFF_BYTES = 512_000;
+
+/**
+ * Squeeze the padding out before matching.
+ *
+ * A spreadsheet export pads every row to the width of its widest, so a row
+ * carrying six real cells arrives as six values and 16,374 commas. Collapsing
+ * runs of delimiters turns 16KB of nothing into a few hundred bytes and lets a
+ * fixed window see far more of the document. Only ever used for *matching* -
+ * the real parse still sees every column in its right position.
+ */
+export function compact(head: string): string {
+  return head.replace(/([,;\t])[\s,;\t]*\1/g, "$1");
+}
 
 const IMAGE_EXT = /\.(png|jpe?g|webp|heic|gif|bmp)$/i;
 const SHEET_EXT = /\.(xlsx|xlsm|xls|csv|tsv)$/i;
@@ -34,7 +59,8 @@ const SHEET_EXT = /\.(xlsx|xlsm|xls|csv|tsv)$/i;
  * Instructor`. PAX is the giveaway - no registrar schedule has a column saying
  * which body of cadets an event is for.
  */
-export function looksLikeMatrix(head: string): boolean {
+export function looksLikeMatrix(raw: string): boolean {
+  const head = compact(raw);
   if (!/(^|[,\t;"\s])pax([,\t;"\s]|$)/i.test(head)) return false;
   const companions = ["time", "event", "location", "uniform", "instructor"].filter((w) =>
     new RegExp(`(^|[,\\t;"])\\s*${w}\\s*([,\\t;"]|$)`, "im").test(head),

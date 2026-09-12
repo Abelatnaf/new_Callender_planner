@@ -14,6 +14,7 @@ import { GeminiTermResponseSchema } from "@/lib/schemas";
 import { toTerm } from "@/lib/convert";
 import { readWorkbook, renderWorkbookForModel } from "@/lib/xlsx";
 import { readCsv } from "@/lib/csv";
+import { extractPdfText } from "@/lib/pdftext";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -26,6 +27,8 @@ export async function POST(request: NextRequest) {
 
     const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
     let filename = "pasted text";
+    /** Said out loud in the warnings, because it changes how much to trust the result. */
+    let readAs = "";
 
     if (upload) {
       filename = upload.name;
@@ -49,9 +52,21 @@ export async function POST(request: NextRequest) {
         }
         parts.push({ text: renderWorkbookForModel(wb) });
       } else if (isPdf(upload.name, upload.type)) {
-        parts.push({
-          inlineData: { mimeType: "application/pdf", data: upload.bytes.toString("base64") },
-        });
+        // A registrar's print view carries the meeting times, rooms and
+        // instructors as real text. Reading them here costs milliseconds and
+        // is exact; sending the same page to vision makes the model infer
+        // "0800-0915" from where a box sits on a grid. A screenshot saved as a
+        // PDF has no text at all, and falls through to vision as before.
+        const text = extractPdfText(upload.bytes);
+        if (text) {
+          readAs = "the PDF's own text";
+          parts.push({ text });
+        } else {
+          readAs = "the PDF as an image";
+          parts.push({
+            inlineData: { mimeType: "application/pdf", data: upload.bytes.toString("base64") },
+          });
+        }
       } else {
         parts.push({ text: upload.bytes.toString("utf8") });
       }
@@ -74,9 +89,11 @@ export async function POST(request: NextRequest) {
     return Response.json({
       term,
       model,
-      warnings: fellBack
-        ? [...warnings, `Read by ${model} - the preferred model was out of quota for this key.`]
-        : warnings,
+      warnings: [
+        ...warnings,
+        ...(readAs ? [`Read from ${readAs}.`] : []),
+        ...(fellBack ? [`Read by ${model} - the preferred model was out of quota for this key.`] : []),
+      ],
     });
   } catch (err) {
     return handleError(err);

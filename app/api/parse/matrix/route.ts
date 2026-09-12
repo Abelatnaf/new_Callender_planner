@@ -46,6 +46,10 @@ export async function POST(request: NextRequest) {
       model: "",
     };
 
+    // The per-sport attendance block is the whole point for an NCAA or club
+    // cadet, and pure noise for everyone else.
+    const noTeam = cadet.athletics === "none";
+
     if (!upload && !preTrimmed) return fail("No file was uploaded.", 400, "no_file");
 
     const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
@@ -69,13 +73,13 @@ export async function POST(request: NextRequest) {
       // fill-right residue. renderWorkbookForModel trims that before sending.
       const wb = readCsv(upload.bytes.toString("utf8"), upload.name);
       if (wb.sheets.length === 0) return fail("That CSV appears to be empty.", 422, "empty_file");
-      parts.push({ text: renderWorkbookForModel(wb) });
+      parts.push({ text: renderWorkbookForModel(wb, { dropSportColumns: noTeam }) });
     } else if (isSpreadsheet(upload.name, upload.type)) {
       const wb = await readWorkbook(upload.bytes, upload.name);
       if (wb.sheets.length === 0) {
         return fail("That workbook has no readable sheets.", 422, "empty_workbook");
       }
-      parts.push({ text: renderWorkbookForModel(wb) });
+      parts.push({ text: renderWorkbookForModel(wb, { dropSportColumns: noTeam }) });
     } else if (isPdf(upload.name, upload.type)) {
       // Gemini reads PDFs natively; hand it the file rather than OCR-ing badly.
       parts.push({

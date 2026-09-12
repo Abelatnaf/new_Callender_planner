@@ -144,8 +144,58 @@ export function parseRef(ref: string): { row: number; col: number } | null {
  * event here" - which is exactly the misreading that would hand a cadet a free
  * hour that does not exist.
  */
-export function renderSheetForModel(input: SheetGrid): string {
-  const sheet = trimSheet(input);
+/**
+ * The per-sport attendance columns down the right of the Matrix.
+ *
+ * Twelve of them, each carrying Attend / Excused / With Team on every single
+ * row. On the real file they are 12,728 characters — 55% of everything sent to
+ * the model — and for a cadet who does regular Corps PT and has no team, all
+ * of it is noise the model has to read past before reaching the schedule.
+ */
+const SPORT_CODES =
+  /^(BASBALL|BASEBALL|BKBALL|BASKETBALL|FB|FOOTBALL|LAX|LACROSSE|MWRIFLE|RIFLE|MSOC|WSOC|SOCCER|MWSWIM|SWIM|MWTRK|TRACK|MWXC|XC|WWPOLO|POLO|WRESTLE|WRESTLING)$/i;
+
+/**
+ * Which columns those codes sit in.
+ *
+ * Found from whichever row carries the most of them rather than from a fixed
+ * position, so a reordered or re-exported sheet still works. Three is the
+ * threshold: a schedule that merely mentions "FB" once is not a header row.
+ */
+export function sportColumns(sheet: SheetGrid): Set<number> {
+  const perRow = new Map<number, number[]>();
+  for (const c of sheet.cells) {
+    if (!SPORT_CODES.test(c.value.trim())) continue;
+    (perRow.get(c.row) ?? perRow.set(c.row, []).get(c.row)!).push(c.col);
+  }
+  let best: number[] = [];
+  for (const cols of perRow.values()) if (cols.length > best.length) best = cols;
+  return best.length >= 3 ? new Set(best) : new Set();
+}
+
+export type RenderOptions = {
+  /**
+   * Drop the per-sport attendance block. True for a cadet with no team, who
+   * cannot act on any of it; false for an NCAA or club cadet, for whom the
+   * same columns are the whole point.
+   */
+  dropSportColumns?: boolean;
+};
+
+export function renderSheetForModel(input: SheetGrid, opts: RenderOptions = {}): string {
+  let sheet = trimSheet(input);
+
+  if (opts.dropSportColumns) {
+    const drop = sportColumns(sheet);
+    if (drop.size > 0) {
+      const cells = sheet.cells.filter((c) => !drop.has(c.col));
+      sheet = {
+        ...sheet,
+        cells,
+        colCount: Math.max(0, ...cells.map((c) => c.col)),
+      };
+    }
+  }
   const filled = new Map<string, string>();
 
   for (const cell of sheet.cells) {
@@ -192,8 +242,10 @@ export function renderSheetForModel(input: SheetGrid): string {
   return lines.join("\n");
 }
 
-export function renderWorkbookForModel(wb: WorkbookGrid): string {
-  return wb.sheets.map(renderSheetForModel).join("\n\n" + "=".repeat(60) + "\n\n");
+export function renderWorkbookForModel(wb: WorkbookGrid, opts: RenderOptions = {}): string {
+  return wb.sheets
+    .map((s) => renderSheetForModel(s, opts))
+    .join("\n\n" + "=".repeat(60) + "\n\n");
 }
 
 function range(from: number, to: number): number[] {
