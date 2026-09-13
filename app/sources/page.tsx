@@ -8,6 +8,8 @@ import { detectMatrix, type LongField } from '@/lib/parse/matrix'
 import { maskFeedUrl } from '@/lib/parse/ics'
 import { TERM_TEMPLATE } from '@/lib/parse/term'
 import { exportState, importState } from '@/lib/store/state'
+import { buildSampleState } from '@/lib/demo/sample'
+import { weekStartOf } from '@/lib/domain/time'
 
 export default function SourcesPage(): React.ReactNode {
   const { state, week, setMatrix, setTerm, setCanvas, rememberMapping, update, today, reset } = usePlanner()
@@ -396,6 +398,20 @@ export default function SourcesPage(): React.ReactNode {
               }}
             />
           </label>
+          <button
+            type="button"
+            className="button secondary small"
+            onClick={() => {
+              if (
+                !state.matrix ||
+                window.confirm('Replace your current sources with the sample week?')
+              ) {
+                update(() => buildSampleState(weekStartOf(today)))
+              }
+            }}
+          >
+            Load sample week
+          </button>
           <button
             type="button"
             className="button ghost small"

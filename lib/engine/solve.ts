@@ -722,13 +722,39 @@ function writeNarrative(input: {
     out.push(
       `All ${formatHours(capacity.demandMinutes)} hours of work fit, with ${formatHours(capacity.slackMinutes)} hours of free time still unclaimed.`,
     )
-  } else {
+  } else if (capacity.freeMinutes < capacity.demandMinutes) {
+    // Genuine capacity shortage: there is less free time than work.
     out.push(
       `You have ${formatHours(capacity.demandMinutes)} hours of work and ${formatHours(capacity.freeMinutes)} hours of free time. ${unplaced.length} block${unplaced.length === 1 ? '' : 's'} did not fit.`,
     )
-    const shortfall = capacity.unplacedMinutes
     out.push(
-      `That is a ${formatHours(shortfall)}-hour shortfall. It will not resolve itself — cut scope, lower an estimate, or accept that something slips.`,
+      `That is a ${formatHours(capacity.unplacedMinutes)}-hour shortfall. It will not resolve itself — cut scope, lower an estimate, or accept that something slips.`,
+    )
+  } else {
+    /**
+     * Work did not fit, but not for want of hours.
+     *
+     * Saying "you have 15 hours of work and 72 hours free, 1 block did not
+     * fit" invites the reader to conclude the app is broken — the numbers
+     * plainly contradict the conclusion. The binding constraint here is
+     * WHEN, not HOW MUCH: a deadline, a daily ceiling, or a window too short
+     * to hold the piece. Naming that is the difference between a report a
+     * cadet trusts and one they stop reading.
+     */
+    const reasons = [...new Set(unplaced.map((u) => u.reason))]
+    const because =
+      reasons.length === 1 && reasons[0] === 'daily_cap_reached'
+        ? 'your daily study ceiling'
+        : reasons.length === 1 && reasons[0] === 'no_window_long_enough'
+          ? 'no single free window being long enough'
+          : reasons.length === 1 && reasons[0] === 'due_before_week'
+            ? 'a deadline that has already passed'
+            : 'when the work is due, not how much of it there is'
+    out.push(
+      `${unplaced.length} block${unplaced.length === 1 ? '' : 's'} did not fit — and the week is not full: ${formatHours(capacity.slackMinutes)} hours are still free.`,
+    )
+    out.push(
+      `What blocked it was ${because}. Each piece below names the constraint that stopped it, so you can see whether it is worth moving something.`,
     )
   }
 

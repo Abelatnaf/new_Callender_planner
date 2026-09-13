@@ -583,3 +583,36 @@ describe('designated study windows', () => {
     expect(withSst.capacity.freeMinutes).toBe(without.capacity.freeMinutes)
   })
 })
+
+describe('the narrative tells the truth about WHY work did not fit', () => {
+  /**
+   * The trap this closes: reporting "15 hours of work, 72 hours free, 1 block
+   * did not fit" invites the reader to conclude the app is broken, because the
+   * numbers plainly contradict the conclusion. When free time exceeds demand
+   * the binding constraint is timing, and the prose has to say so.
+   */
+  it('does not imply a capacity shortage when the week is mostly empty', () => {
+    const plan = generatePlan(
+      baseInput({
+        // Plenty of free time; the only problem is a deadline on Monday
+        // morning that cannot be beaten by a task needing four hours.
+        tasks: [{ ...task('tight', 240, 0, 7 * 60) }],
+        preferences: { ...DEFAULT_PREFERENCES, minLeadHours: 12 },
+      }),
+    )
+    expect(plan.unplaced.length).toBeGreaterThan(0)
+    expect(plan.capacity.freeMinutes).toBeGreaterThan(plan.capacity.demandMinutes)
+
+    const prose = plan.narrative.join(' ')
+    expect(prose).toContain('the week is not full')
+    expect(prose).toMatch(/deadline|due|ceiling|window/i)
+    expect(prose).not.toContain('shortfall')
+  })
+
+  it('does call it a shortfall when free time really is the constraint', () => {
+    const events = [...Array(7).keys()].map((d) => hardEvent(`full${d}`, d, 6 * 60, 22 * 60, `full ${d}`))
+    const plan = generatePlan(baseInput({ events, tasks: [task('huge', 1800, null)] }))
+    expect(plan.capacity.freeMinutes).toBeLessThan(plan.capacity.demandMinutes)
+    expect(plan.narrative.join(' ')).toContain('shortfall')
+  })
+})

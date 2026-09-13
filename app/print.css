@@ -332,13 +332,6 @@
     max-width: none;
   }
 
-  .print-narrative p:first-child::first-letter {
-    font-size: 1em;
-    float: none;
-    padding: 0;
-    color: inherit;
-  }
-
   .print-legend {
     display: flex;
     flex-wrap: wrap;

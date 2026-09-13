@@ -13,6 +13,7 @@ import {
   UnplacedList,
 } from '@/components/Panels'
 import { encodeLockSignature } from '@/lib/engine/solve'
+import { buildSampleState } from '@/lib/demo/sample'
 import { addDays, isoWeekLabel, parseLocalDate, weekStartOf } from '@/lib/domain/time'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -26,7 +27,7 @@ function rangeLabel(weekStart: string): string {
 }
 
 export default function WeekPage(): React.ReactNode {
-  const { state, week, hydrating, today, shiftWeek, goToWeek, toggleLock } = usePlanner()
+  const { state, week, hydrating, today, shiftWeek, goToWeek, toggleLock, update } = usePlanner()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [nowMinutes, setNowMinutes] = useState<number | null>(null)
 
@@ -90,7 +91,11 @@ export default function WeekPage(): React.ReactNode {
   }
 
   if (!week.hasAnySource) {
-    return <FirstRun />
+    return (
+      <FirstRun
+        onLoadSample={() => update(() => buildSampleState(weekStartOf(today)))}
+      />
+    )
   }
 
   return (
@@ -189,7 +194,7 @@ export default function WeekPage(): React.ReactNode {
   )
 }
 
-function FirstRun(): React.ReactNode {
+function FirstRun({ onLoadSample }: { onLoadSample: () => void }): React.ReactNode {
   return (
     <div className="stack" style={{ maxWidth: 720, margin: '0 auto', paddingTop: 'var(--space-xl)' }}>
       <div>
@@ -216,6 +221,20 @@ function FirstRun(): React.ReactNode {
           <Link href="/work" className="button secondary" style={{ textDecoration: 'none' }}>
             Or type in work by hand
           </Link>
+        </div>
+      </section>
+
+      <section className="card">
+        <h3>Just want to see it work?</h3>
+        <p className="item-note" style={{ marginTop: 0 }}>
+          Loads a plausible cadet week — a matrix, five courses, a Canvas feed with real deadlines —
+          dated onto this week. It includes a genuine institutional conflict, so you can see what the
+          app does with one. Everything stays in this browser and you can clear it in one click.
+        </p>
+        <div className="button-row" style={{ marginTop: 'var(--space-sm)' }}>
+          <button type="button" className="button" onClick={onLoadSample}>
+            Load a sample week
+          </button>
         </div>
       </section>
 

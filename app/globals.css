@@ -907,12 +907,14 @@ label.field {
   margin-bottom: 0;
 }
 
-.narrative p:first-child::first-letter {
-  font-size: 1.9em;
-  line-height: 1;
-  float: left;
-  padding: 0.06em 0.08em 0 0;
-  color: var(--terracotta);
+/* No drop cap.
+   A floated ::first-letter collapses the space after it, and the most common
+   opening for this prose is a count — "1 block did not fit" rendered as
+   "1block". A flourish that breaks on the content it most often wraps is not
+   worth keeping; the serif face already sets this text apart. */
+
+.narrative p:first-child {
+  font-size: 1.06em;
 }
 
 /* ===========================================================================
