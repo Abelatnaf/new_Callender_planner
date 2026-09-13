@@ -1,0 +1,3 @@
+# A cadet schedule is not for indexing.
+User-agent: *
+Disallow: /

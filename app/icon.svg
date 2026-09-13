@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#1C1A17"/>
+  <!-- Ink is obligation: three solid bars. White space is freedom: the gap. -->
+  <rect x="7" y="7" width="18" height="3.5" rx="1" fill="#C4552B"/>
+  <rect x="7" y="13" width="12" height="3.5" rx="1" fill="#4D7689"/>
+  <rect x="7" y="21.5" width="9" height="3.5" rx="1" fill="#5F8566"/>
+</svg>

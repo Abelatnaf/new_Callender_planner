@@ -54,9 +54,19 @@ function baseInput(overrides: Partial<SolveInput> = {}): SolveInput {
   }
 }
 
-/** Every pair of time-occupying blocks must be disjoint. The core safety property. */
-function assertNoDoubleBooking(blocks: Array<{ span: { start: number; end: number }; title: string; kind: string }>): void {
-  const occupying = blocks.filter((b) => spanLength(b.span) > 0 && b.kind === 'study')
+/**
+ * Generated study blocks must never overlap each other. The core safety
+ * property.
+ *
+ * Source-provided study PERIODS (SST) are excluded: they carry `kind: 'study'`
+ * too, but they are containers the solver deliberately schedules inside, so an
+ * overlap with one is intended rather than a double-booking. Provenance tells
+ * them apart — a generated block has a `taskId`.
+ */
+function assertNoDoubleBooking(
+  blocks: Array<{ span: { start: number; end: number }; title: string; kind: string; taskId?: string }>,
+): void {
+  const occupying = blocks.filter((b) => spanLength(b.span) > 0 && b.kind === 'study' && b.taskId !== undefined)
   for (let i = 0; i < occupying.length; i++) {
     for (let j = i + 1; j < occupying.length; j++) {
       const a = occupying[i]!
@@ -506,5 +516,70 @@ describe('end to end, on the fixture week', () => {
     // Saturday and Sunday carry real obligations in this fixture; a Mon-Fri
     // planner would lose them entirely.
     expect(plan.capacity.byDay[5]!.hardMinutes + plan.capacity.byDay[6]!.hardMinutes).toBeGreaterThan(0)
+  })
+})
+
+describe('designated study windows', () => {
+  /**
+   * A matrix that lists SST is naming time the cadet is REQUIRED to be at a
+   * desk. Treating it as ordinary free time makes the solver schedule a
+   * reading at 16:00 and leave the mandatory study period empty, which is
+   * backwards and a cadet would notice immediately.
+   */
+  function sst(day: number): WeekEvent {
+    return {
+      id: `sst-${day}`,
+      source: 'matrix',
+      sourceRef: `sst-${day}`,
+      title: 'SST',
+      kind: 'study',
+      span: span(atDay(day, 19 * 60), atDay(day, 21 * 60)),
+      hard: false,
+    }
+  }
+
+  it('prefers a study period over an equally workable window elsewhere', () => {
+    const plan = generatePlan(
+      baseInput({
+        events: [sst(0)],
+        tasks: [task('reading', 60, 4)],
+        preferences: { ...DEFAULT_PREFERENCES, minLeadHours: 0 },
+      }),
+    )
+    const placed = plan.blocks.find((b) => b.kind === 'study' && b.taskId === 'reading')
+    expect(placed).toBeDefined()
+    expect(placed!.span.start).toBeGreaterThanOrEqual(atDay(0, 19 * 60))
+    expect(placed!.span.end).toBeLessThanOrEqual(atDay(0, 21 * 60))
+  })
+
+  it('says so in the explanation', () => {
+    const plan = generatePlan(
+      baseInput({ events: [sst(0)], tasks: [task('reading', 60, 4)], preferences: { ...DEFAULT_PREFERENCES, minLeadHours: 0 } }),
+    )
+    const placed = plan.blocks.find((b) => b.kind === 'study' && b.taskId === 'reading')
+    expect(placed!.because?.join(' ')).toContain('costs you no free time')
+  })
+
+  it('still places work outside one when the period is full', () => {
+    const plan = generatePlan(
+      baseInput({
+        events: [sst(0)],
+        // 5 hours of work against a single 2-hour study period.
+        tasks: [task('big', 300, 6)],
+        preferences: { ...DEFAULT_PREFERENCES, minLeadHours: 0, maxStudyMinutesPerDay: 600 },
+      }),
+    )
+    const placed = plan.blocks.filter((b) => b.kind === 'study' && b.taskId === 'big')
+    expect(placed.length).toBeGreaterThan(1)
+    expect(placed.some((b) => b.span.start < atDay(0, 19 * 60) || b.span.start >= atDay(0, 21 * 60))).toBe(true)
+    assertNoDoubleBooking(plan.blocks)
+  })
+
+  it('does not count a study period as occupied time', () => {
+    // It is soft: it must not be subtracted from free time, or the cadet's
+    // capacity would be understated by two hours a night.
+    const withSst = generatePlan(baseInput({ events: [sst(0)] }))
+    const without = generatePlan(baseInput({ events: [] }))
+    expect(withSst.capacity.freeMinutes).toBe(without.capacity.freeMinutes)
   })
 })

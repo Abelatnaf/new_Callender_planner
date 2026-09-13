@@ -163,12 +163,28 @@ export function generatePlan(input: SolveInput): Plan {
 
   const freeBeforePlacement = free.map((s) => ({ ...s }))
 
+  /**
+   * Designated study windows.
+   *
+   * A matrix that lists SST or Call to Quarters is naming time you are
+   * *required to be at your desk* — an institutional container for exactly the
+   * work this engine places. It is soft rather than hard, because the point is
+   * to be able to schedule inside it, but it is not merely neutral free time:
+   * work placed here costs nothing, and work placed elsewhere spends a window
+   * that could have been yours. So placement prefers it, strongly.
+   *
+   * Without this the solver treats SST as ordinary free time and will happily
+   * schedule a reading at 16:00 while leaving two hours of mandatory study
+   * period empty — which is backwards, and a cadet would notice immediately.
+   */
+  const designatedStudy = normalize(softEvents.filter((e) => e.kind === 'study').map((e) => e.span))
+
   // --- 5. DEMAND ------------------------------------------------------------
   const chunks = buildChunks(input.tasks, prefs, input.patch)
   const demandMinutes = chunks.reduce((sum, c) => sum + c.minutes, 0)
 
   // --- 6. PLACE -------------------------------------------------------------
-  const placement = place(chunks, free, prefs)
+  const placement = place(chunks, free, prefs, designatedStudy)
 
   // --- 7. BACKFILL ----------------------------------------------------------
   const openWindows = placement.remaining
@@ -382,7 +398,12 @@ interface PlacementResult {
   remaining: Span[]
 }
 
-function place(chunks: readonly Chunk[], free: readonly Span[], prefs: Preferences): PlacementResult {
+function place(
+  chunks: readonly Chunk[],
+  free: readonly Span[],
+  prefs: Preferences,
+  designatedStudy: readonly Span[] = [],
+): PlacementResult {
   // Deterministic order: criticality, then largest first within a tier, then a
   // stable key so the sort can never depend on input order.
   const queue = [...chunks].sort(
@@ -419,10 +440,31 @@ function place(chunks: readonly Chunk[], free: readonly Span[], prefs: Preferenc
       if (dayLoad[day] === undefined) continue
       if ((dayLoad[day] ?? 0) + chunk.minutes > prefs.maxStudyMinutesPerDay) continue
 
-      const start = window.start
-      if (latestFinish - start < chunk.minutes) continue
+      /**
+       * Candidate start offsets within this window.
+       *
+       * The window start alone is not enough. A free evening that runs
+       * 18:45-23:00 CONTAINS the 19:00-21:00 study period, so starting at the
+       * window edge lands fifteen minutes outside it and forfeits the
+       * preference entirely. Offering each designated window's own start as a
+       * candidate is what lets the solver step into the period rather than
+       * straddle its edge.
+       */
+      const starts = new Set<number>([window.start])
+      for (const designated of designatedStudy) {
+        if (designated.start > window.start && designated.start < latestFinish) {
+          starts.add(designated.start)
+        }
+      }
 
-      candidates.push({ window, start, score: scoreSlot(window, start, chunk, prefs) })
+      for (const start of starts) {
+        if (latestFinish - start < chunk.minutes) continue
+        candidates.push({
+          window,
+          start,
+          score: scoreSlot(window, start, chunk, prefs, designatedStudy),
+        })
+      }
     }
 
     if (candidates.length === 0) {
@@ -447,7 +489,14 @@ function place(chunks: readonly Chunk[], free: readonly Span[], prefs: Preferenc
       chunkLabel: chunk.label,
       locked: false,
       ...(chunk.course ? { course: chunk.course } : {}),
-      because: explainPlacement(chunk, chosen.window, blockSpan, prefs, candidates.length),
+      because: explainPlacement(
+        chunk,
+        chosen.window,
+        blockSpan,
+        prefs,
+        candidates.length,
+        inDesignatedStudy(blockSpan, designatedStudy),
+      ),
     })
 
     windows = subtract(windows, [span(blockSpan.start - studyGap, blockSpan.end + studyGap)]).filter(
@@ -466,12 +515,27 @@ function place(chunks: readonly Chunk[], free: readonly Span[], prefs: Preferenc
  * weak secondary term, and `dayPhaseBias` lets a night owl pull work later
  * without overriding the fit logic.
  */
-function scoreSlot(window: Span, start: number, chunk: Chunk, prefs: Preferences): number {
+function scoreSlot(
+  window: Span,
+  start: number,
+  chunk: Chunk,
+  prefs: Preferences,
+  designatedStudy: readonly Span[],
+): number {
   const waste = spanLength(window) - chunk.minutes
   const earliness = start / MINUTES_PER_WEEK
   const phase = (start % MINUTES_PER_DAY) / MINUTES_PER_DAY
   const phasePenalty = Math.abs(phase - prefs.dayPhaseBias)
-  return waste * 1.0 + earliness * 30 + phasePenalty * 60
+  // Large enough to beat the best-fit and phase terms outright: being at your
+  // desk during the study period you are required to attend is worth more than
+  // a tidier window elsewhere.
+  const designatedBonus = inDesignatedStudy(span(start, start + chunk.minutes), designatedStudy) ? 600 : 0
+  return waste * 1.0 + earliness * 30 + phasePenalty * 60 - designatedBonus
+}
+
+/** Is this placement wholly inside a designated study window? */
+function inDesignatedStudy(placed: Span, windows: readonly Span[]): boolean {
+  return windows.some((w) => placed.start >= w.start && placed.end <= w.end)
 }
 
 function explainPlacement(
@@ -480,12 +544,16 @@ function explainPlacement(
   placed: Span,
   prefs: Preferences,
   candidateCount: number,
+  designated: boolean,
 ): string[] {
   const out: string[] = []
   const waste = spanLength(window) - chunk.minutes
   out.push(
     `${formatDuration(chunk.minutes)} of ${chunk.title}${chunk.label === 'session' ? '' : ` (${chunk.label})`}.`,
   )
+  if (designated) {
+    out.push('Placed inside a study period you are already required to attend, so it costs you no free time at all.')
+  }
   if (waste === 0) out.push('This window fits it exactly.')
   else out.push(`Chosen as the tightest of ${candidateCount} workable window${candidateCount === 1 ? '' : 's'}, leaving ${formatDuration(waste)} spare — the longer windows are held back for longer work.`)
 
