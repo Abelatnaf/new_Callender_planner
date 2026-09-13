@@ -1,0 +1,72 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Instructure//Canvas//EN
+CALSCALE:GREGORIAN
+BEGIN:VEVENT
+UID:event-assignment-1234567@vmi.instructure.com
+DTSTAMP:20260910T120000Z
+DTSTART:20260917T035900Z
+SUMMARY:Reading Response 2 [ERH-101-04]
+DESCRIPTION:Respond to the Gilgamesh excerpt in 500 words.
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-1234568@vmi.instructure.com
+DTSTAMP:20260910T120000Z
+DTSTART:20260918T035900Z
+SUMMARY:Research Paper Draft [ERH-101-04]
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-1234569@vmi.instructure.com
+DTSTAMP:20260910T120000Z
+DTSTART:20260916T155900Z
+SUMMARY:Problem Set 4 [CIS-111-01]
+END:VEVENT
+BEGIN:VEVENT
+UID:event-cancelled-999@vmi.instructure.com
+DTSTART:20260916T140000Z
+DTEND:20260916T150000Z
+STATUS:CANCELLED
+SUMMARY:Cancelled Review Session [CIS-111-01]
+END:VEVENT
+BEGIN:VEVENT
+UID:event-allday-777@vmi.instructure.com
+DTSTART;VALUE=DATE:20260919
+SUMMARY:Institute Holiday
+END:VEVENT
+BEGIN:VEVENT
+UID:event-zoned-555@vmi.instructure.com
+DTSTART;TZID=America/New_York:20260915T140000
+DTEND;TZID=America/New_York:20260915T152000
+SUMMARY:ERH-101 Conference [ERH-101-04]
+LOCATION:Scott Shipp 300
+END:VEVENT
+BEGIN:VEVENT
+UID:event-floating-444@vmi.instructure.com
+DTSTART:20260917T190000
+DTEND:20260917T203000
+SUMMARY:Study Group
+END:VEVENT
+BEGIN:VEVENT
+UID:event-recurring-333@vmi.instructure.com
+DTSTART;TZID=America/New_York:20260914T100000
+DTEND;TZID=America/New_York:20260914T105000
+RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR
+SUMMARY:MATH-121 Recitation [MATH-121-02]
+END:VEVENT
+BEGIN:VEVENT
+UID:event-folded-222@vmi.instructure.com
+DTSTART:20260918T160000Z
+SUMMARY:A very long assignment title that the calendar server has folded acr
+ oss two physical lines [HI-104-02]
+END:VEVENT
+BEGIN:VEVENT
+UID:event-midterm-111@vmi.instructure.com
+DTSTART;TZID=America/New_York:20260918T080000
+DTEND;TZID=America/New_York:20260918T095000
+SUMMARY:CIS-111 Midterm Exam [CIS-111-01]
+END:VEVENT
+BEGIN:VEVENT
+UID:event-nodtstart-000@vmi.instructure.com
+SUMMARY:Broken entry with no start
+END:VEVENT
+END:VCALENDAR

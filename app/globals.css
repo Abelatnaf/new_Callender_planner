@@ -1,0 +1,1269 @@
+/* ===========================================================================
+   ORDER — Atelier Warmth, re-tuned for paper
+   ===========================================================================
+
+   The palette comes from the Stitch design system, with three deliberate
+   changes, all driven by the fact that the deliverable is a printed page:
+
+   1. The five accents were re-checked for GREYSCALE SEPARATION. On the
+      original set, terracotta and sun ochre land within a few points of each
+      other in luminance, so on a mono printer a mandatory formation and an
+      assignment deadline become the same grey. The accents here are spaced in
+      lightness as well as hue, and every block also carries a glyph and a
+      fill texture so colour is never the only channel.
+
+   2. Ink is darker than the original `#1C1A17` at small sizes on paper
+      (`--ink` is used for type; `--ink-print` for the print sheet).
+
+   3. A dark theme exists for the screen. Reading a planner in a dark barracks
+      room after taps is a real use case, and the accents are re-tuned rather
+      than merely inverted so the kind vocabulary survives.
+   ========================================================================= */
+
+:root {
+  /* ---- Canvas and surfaces ---------------------------------------------- */
+  --canvas: #fbf9f5;
+  --subdued: #f4efeb;
+  --raised: #ffffff;
+  --overlay: rgba(244, 239, 235, 0.86);
+
+  /* ---- Ink -------------------------------------------------------------- */
+  --ink: #1c1a17;
+  --ink-secondary: #57524a;
+  --ink-muted: #8c8479;
+  --hairline: #e6dfd5;
+  --hairline-strong: #d6ccbe;
+
+  /* ---- Accents. Luminance ladder, so greyscale keeps them apart --------- */
+  --terracotta: #c4552b; /* darkest  — Corps mandatory */
+  --sky: #4d7689;        /* dark     — academics */
+  --lavender: #7b6fa0;   /* mid      — personal, recharge */
+  --sage: #5f8566;       /* mid-light— generated study */
+  --ochre: #d9902c;      /* lightest — deadlines */
+
+  --terracotta-tint: rgba(196, 85, 43, 0.1);
+  --sky-tint: rgba(77, 118, 137, 0.1);
+  --lavender-tint: rgba(123, 111, 160, 0.1);
+  --sage-tint: rgba(95, 133, 102, 0.1);
+  --ochre-tint: rgba(217, 144, 44, 0.12);
+  --ink-tint: rgba(28, 26, 23, 0.06);
+
+  --danger: #ba1a1a;
+  --danger-tint: rgba(186, 26, 26, 0.09);
+
+  /* ---- Type ------------------------------------------------------------- */
+  --font-display: var(--font-newsreader), 'Newsreader', 'Iowan Old Style',
+    'Palatino Linotype', Palatino, Georgia, serif;
+  --font-sans: var(--font-jakarta), 'Plus Jakarta Sans', -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* ---- Shape and depth -------------------------------------------------- */
+  --r-sm: 0.25rem;
+  --r: 0.5rem;
+  --r-md: 0.75rem;
+  --r-lg: 1rem;
+  --r-xl: 1.5rem;
+
+  --shadow-raised: 0 4px 20px -2px rgba(28, 26, 23, 0.04), 0 1px 3px rgba(28, 26, 23, 0.02);
+  --shadow-overlay: 0 12px 36px -4px rgba(28, 26, 23, 0.08), 0 4px 12px -2px rgba(28, 26, 23, 0.03);
+
+  /* ---- Rhythm ----------------------------------------------------------- */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --gutter: 1.25rem;
+
+  /* ---- Grid geometry. One knob so the week scales coherently ------------ */
+  --hour-height: 54px;
+  --time-gutter: 58px;
+  --dock-width: 248px;
+  --inspector-width: 336px;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'],
+:root:not([data-theme='light']) {
+  /* Dark theme applies only when explicitly set; see the media query below. */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --canvas: #171614;
+    --subdued: #1f1d1a;
+    --raised: #252220;
+    --overlay: rgba(31, 29, 26, 0.88);
+
+    --ink: #f2ede7;
+    --ink-secondary: #c3bbb0;
+    --ink-muted: #8f877c;
+    --hairline: #332f2b;
+    --hairline-strong: #423d37;
+
+    --terracotta: #e8825c;
+    --sky: #8db4c6;
+    --lavender: #b0a4d6;
+    --sage: #92bd9a;
+    --ochre: #f0b95f;
+
+    --terracotta-tint: rgba(232, 130, 92, 0.16);
+    --sky-tint: rgba(141, 180, 198, 0.16);
+    --lavender-tint: rgba(176, 164, 214, 0.16);
+    --sage-tint: rgba(146, 189, 154, 0.16);
+    --ochre-tint: rgba(240, 185, 95, 0.18);
+    --ink-tint: rgba(242, 237, 231, 0.08);
+
+    --danger: #ff8f86;
+    --danger-tint: rgba(255, 143, 134, 0.14);
+
+    --shadow-raised: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-overlay: 0 12px 36px -4px rgba(0, 0, 0, 0.5), 0 4px 12px -2px rgba(0, 0, 0, 0.35);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --canvas: #171614;
+  --subdued: #1f1d1a;
+  --raised: #252220;
+  --overlay: rgba(31, 29, 26, 0.88);
+  --ink: #f2ede7;
+  --ink-secondary: #c3bbb0;
+  --ink-muted: #8f877c;
+  --hairline: #332f2b;
+  --hairline-strong: #423d37;
+  --terracotta: #e8825c;
+  --sky: #8db4c6;
+  --lavender: #b0a4d6;
+  --sage: #92bd9a;
+  --ochre: #f0b95f;
+  --terracotta-tint: rgba(232, 130, 92, 0.16);
+  --sky-tint: rgba(141, 180, 198, 0.16);
+  --lavender-tint: rgba(176, 164, 214, 0.16);
+  --sage-tint: rgba(146, 189, 154, 0.16);
+  --ochre-tint: rgba(240, 185, 95, 0.18);
+  --ink-tint: rgba(242, 237, 231, 0.08);
+  --danger: #ff8f86;
+  --danger-tint: rgba(255, 143, 134, 0.14);
+  --shadow-raised: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-overlay: 0 12px 36px -4px rgba(0, 0, 0, 0.5), 0 4px 12px -2px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular figures on every time label, without exception. A week grid whose
+   digits shift width is unreadable at a glance. */
+.tnum,
+time,
+.grid-time,
+.metric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+h1 {
+  font-size: 32px;
+  line-height: 1.25;
+}
+h2 {
+  font-size: 22px;
+  line-height: 1.3;
+  font-weight: 500;
+}
+h3 {
+  font-size: 17px;
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+a {
+  color: inherit;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.muted {
+  color: var(--ink-muted);
+}
+.secondary {
+  color: var(--ink-secondary);
+}
+
+/* ===========================================================================
+   Shell
+   ========================================================================= */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--dock-width) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.dock {
+  background: var(--subdued);
+  border-right: 1px solid var(--hairline);
+  padding: var(--space-lg) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand-mark {
+  font-family: var(--font-display);
+  font-size: 26px;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.brand-motto {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--r);
+  text-decoration: none;
+  color: var(--ink-secondary);
+  font-weight: 500;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.nav-item:hover {
+  background: var(--ink-tint);
+  color: var(--ink);
+}
+
+.nav-item[aria-current='page'] {
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-raised);
+}
+
+.nav-glyph {
+  width: 18px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.nav-item[aria-current='page'] .nav-glyph {
+  color: var(--terracotta);
+}
+
+.main {
+  min-width: 0;
+  padding: var(--space-lg) var(--gutter) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.page-head p {
+  margin: var(--space-xs) 0 0;
+  color: var(--ink-secondary);
+  max-width: 62ch;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--inspector-width);
+  gap: var(--gutter);
+  align-items: start;
+}
+
+/* ===========================================================================
+   Controls
+   ========================================================================= */
+
+.button {
+  font: inherit;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  background: var(--ink);
+  color: var(--canvas);
+  transition: transform 80ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.button:hover {
+  background: #332f2b;
+}
+
+:root[data-theme='dark'] .button:hover {
+  background: #fffdf9;
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.button.secondary {
+  background: transparent;
+  border-color: var(--hairline-strong);
+  color: var(--ink);
+}
+
+.button.secondary:hover {
+  background: var(--ink-tint);
+}
+
+.button.ghost {
+  background: transparent;
+  color: var(--ink-secondary);
+  border-color: transparent;
+  padding: 0.375rem 0.625rem;
+}
+
+.button.ghost:hover {
+  background: var(--ink-tint);
+  color: var(--ink);
+}
+
+.button.small {
+  padding: 0.3rem 0.7rem;
+  font-size: 12px;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+input[type='text'],
+input[type='url'],
+input[type='time'],
+input[type='number'],
+select,
+textarea {
+  font: inherit;
+  background: var(--raised);
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--canvas), 0 0 0 3.5px var(--ink);
+}
+
+label.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-secondary);
+}
+
+/* ===========================================================================
+   Cards
+   ========================================================================= */
+
+.card {
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-raised);
+  padding: var(--space-md);
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.card.accent-top {
+  border-top: 3px solid var(--ochre);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.stack.tight {
+  gap: var(--space-sm);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: var(--ink-tint);
+  color: var(--ink-secondary);
+  white-space: nowrap;
+}
+
+.pill[data-accent='terracotta'] { background: var(--terracotta-tint); color: var(--terracotta); }
+.pill[data-accent='sky']        { background: var(--sky-tint);        color: var(--sky); }
+.pill[data-accent='ochre']      { background: var(--ochre-tint);      color: #9a5f0d; }
+.pill[data-accent='sage']       { background: var(--sage-tint);       color: var(--sage); }
+.pill[data-accent='lavender']   { background: var(--lavender-tint);   color: var(--lavender); }
+
+:root[data-theme='dark'] .pill[data-accent='ochre'] { color: var(--ochre); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .pill[data-accent='ochre'] { color: var(--ochre); }
+}
+
+/* ===========================================================================
+   The week grid
+   ===========================================================================
+   Geometry rules the Stitch mock broke, and why each one matters:
+
+   - UNIFORM TIME AXIS. The mock's rows ran 08:00, 09:00, 11:15, 13:00, 14:30,
+     17:00. A grid whose vertical scale is not constant cannot be read for
+     duration, which is the only reason to draw a grid.
+   - SEVEN COLUMNS. The mock showed Mon-Fri. Parades, guard and CQ are weekend
+     obligations; a five-day planner loses the tightest days of a cadet week.
+   - NO TRUNCATION AT THE DEFAULT SIZE. The mock truncated nearly every label
+     ("Edit...", "Sho...", "Custo..."). Labels here degrade by tier: full text,
+     then title only, then glyph only — legible at every size instead of
+     clipped at all of them.
+   - REAL OVERLAP LANES. Colliding blocks divide the column instead of drawing
+     on top of each other. A hidden obligation is the worst failure this app
+     can have.
+   ========================================================================= */
+
+.grid-frame {
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-raised);
+  overflow: hidden;
+}
+
+.grid-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--subdued);
+}
+
+.grid-scroll {
+  overflow-x: auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: var(--time-gutter) repeat(7, minmax(104px, 1fr));
+  min-width: 760px;
+}
+
+.grid-corner {
+  border-bottom: 1px solid var(--hairline);
+  border-right: 1px solid var(--hairline);
+  background: var(--subdued);
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+.grid-dayhead {
+  border-bottom: 1px solid var(--hairline);
+  border-right: 1px solid var(--hairline);
+  padding: var(--space-sm) var(--space-xs);
+  text-align: center;
+  background: var(--subdued);
+}
+
+.grid-dayhead:last-child {
+  border-right: none;
+}
+
+.grid-dayhead .dow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: var(--ink-muted);
+}
+
+.grid-dayhead .dom {
+  font-family: var(--font-display);
+  font-size: 19px;
+  line-height: 1.1;
+}
+
+.grid-dayhead[data-today='true'] {
+  background: var(--ink);
+}
+
+.grid-dayhead[data-today='true'] .dow,
+.grid-dayhead[data-today='true'] .dom {
+  color: var(--canvas);
+}
+
+.grid-dayhead[data-weekend='true']:not([data-today='true']) .dom {
+  color: var(--ink-secondary);
+}
+
+.grid-gutter {
+  position: relative;
+  border-right: 1px solid var(--hairline);
+  background: var(--subdued);
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.grid-time {
+  position: absolute;
+  right: 6px;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.grid-day {
+  position: relative;
+  border-right: 1px solid var(--hairline);
+  /* Hairlines every hour, a lighter one on the half hour. Drawn as a gradient
+     so the row count never desynchronises from the block positions. */
+  background-image: repeating-linear-gradient(
+      to bottom,
+      var(--hairline) 0,
+      var(--hairline) 1px,
+      transparent 1px,
+      transparent var(--hour-height)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--hour-height) / 2),
+      color-mix(in srgb, var(--hairline) 45%, transparent) calc(var(--hour-height) / 2),
+      color-mix(in srgb, var(--hairline) 45%, transparent) calc(var(--hour-height) / 2 + 1px),
+      transparent calc(var(--hour-height) / 2 + 1px),
+      transparent var(--hour-height)
+    );
+}
+
+.grid-day:last-child {
+  border-right: none;
+}
+
+.grid-day[data-weekend='true'] {
+  background-color: color-mix(in srgb, var(--subdued) 55%, transparent);
+}
+
+/* Free windows the solver left open, painted so unclaimed time is visible
+   rather than blank. */
+.open-window {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  border-radius: var(--r-sm);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--ink-tint) 0,
+    var(--ink-tint) 2px,
+    transparent 2px,
+    transparent 7px
+  );
+  pointer-events: none;
+}
+
+.now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1.5px solid var(--terracotta);
+  z-index: 4;
+  pointer-events: none;
+}
+
+.now-line::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -3.5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--terracotta);
+}
+
+/* ---- Blocks ------------------------------------------------------------- */
+
+.block {
+  position: absolute;
+  border-radius: var(--r-sm);
+  padding: 3px 5px;
+  overflow: hidden;
+  text-align: left;
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1.25;
+  cursor: pointer;
+  border: 1px solid transparent;
+  display: block;
+  width: 100%;
+  transition: box-shadow 100ms ease, transform 80ms ease;
+}
+
+.block:hover {
+  box-shadow: var(--shadow-overlay);
+  z-index: 5;
+}
+
+.block[aria-pressed='true'] {
+  box-shadow: 0 0 0 2px var(--ink);
+  z-index: 6;
+}
+
+.block-title {
+  font-weight: 600;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.block-meta {
+  display: block;
+  font-size: 10px;
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.block-glyph {
+  font-weight: 700;
+  font-size: 10px;
+  opacity: 0.75;
+  margin-right: 3px;
+}
+
+/* The invariant that matters most, and it costs one class:
+   what the Institute decided is SOLID; what the app decided is
+   soft-filled with a dashed leading edge. */
+.block[data-hard='true'] {
+  border-left-width: 3px;
+  border-left-style: solid;
+}
+
+.block[data-hard='false'] {
+  border-left-width: 3px;
+  border-left-style: dashed;
+}
+
+.block[data-accent='terracotta'] { background: var(--terracotta-tint); color: var(--terracotta); border-left-color: var(--terracotta); }
+.block[data-accent='sky']        { background: var(--sky-tint);        color: var(--sky);        border-left-color: var(--sky); }
+.block[data-accent='ochre']      { background: var(--ochre-tint);      color: #8a5509;           border-left-color: var(--ochre); }
+.block[data-accent='sage']       { background: var(--sage-tint);       color: var(--sage);       border-left-color: var(--sage); }
+.block[data-accent='lavender']   { background: var(--lavender-tint);   color: var(--lavender);   border-left-color: var(--lavender); }
+.block[data-accent='ink']        { background: var(--ink-tint);        color: var(--ink-secondary); border-left-color: var(--ink-muted); }
+
+:root[data-theme='dark'] .block[data-accent='ochre'] { color: var(--ochre); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .block[data-accent='ochre'] { color: var(--ochre); }
+}
+
+/* Texture is the third redundant channel, after hue and glyph. */
+.block[data-texture='hatch'] {
+  background-image: repeating-linear-gradient(
+    135deg,
+    currentColor 0,
+    currentColor 1px,
+    transparent 1px,
+    transparent 6px
+  );
+  background-blend-mode: normal;
+}
+
+.block[data-texture='dots'] {
+  background-image: radial-gradient(currentColor 0.5px, transparent 0.6px);
+  background-size: 6px 6px;
+}
+
+.block[data-locked='true']::after {
+  content: '◆';
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+/* A deadline is a marker, not a block: it consumes no height, so it renders as
+   a rule across the column with the time beside it. */
+.marker {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 0;
+  border-top: 2px dotted var(--ochre);
+  z-index: 3;
+  cursor: pointer;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  padding: 0;
+}
+
+.marker-label {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  right: 2px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #8a5509;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--canvas);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+:root[data-theme='dark'] .marker-label { color: var(--ochre); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .marker-label { color: var(--ochre); }
+}
+
+/* ===========================================================================
+   Capacity, conflicts, unplaced — the truthful widgets
+   ========================================================================= */
+
+.capacity-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--ink-tint);
+  margin: var(--space-sm) 0;
+}
+
+.capacity-seg[data-seg='placed'] { background: var(--sage); }
+.capacity-seg[data-seg='slack'] { background: color-mix(in srgb, var(--sky) 40%, transparent); }
+.capacity-seg[data-seg='short'] {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--danger) 0,
+    var(--danger) 3px,
+    color-mix(in srgb, var(--danger) 50%, transparent) 3px,
+    color-mix(in srgb, var(--danger) 50%, transparent) 6px
+  );
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric {
+  font-weight: 600;
+}
+
+.banner {
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--danger);
+  background: var(--danger-tint);
+  border-radius: var(--r);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.banner h3 {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.banner.warn {
+  border-left-color: var(--ochre);
+  background: var(--ochre-tint);
+}
+
+.banner ul {
+  margin: var(--space-xs) 0 0;
+  padding-left: 1.1rem;
+}
+
+.banner li {
+  margin: 2px 0;
+}
+
+.narrative {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.narrative p {
+  margin: 0 0 var(--space-sm);
+}
+
+.narrative p:last-child {
+  margin-bottom: 0;
+}
+
+/* No drop cap.
+   A floated ::first-letter collapses the space after it, and the most common
+   opening for this prose is a count — "1 block did not fit" rendered as
+   "1block". A flourish that breaks on the content it most often wraps is not
+   worth keeping; the serif face already sets this text apart. */
+
+.narrative p:first-child {
+  font-size: 1.06em;
+}
+
+/* ===========================================================================
+   Lists, tables, misc
+   ========================================================================= */
+
+.item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
+  background: var(--canvas);
+}
+
+.item-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.item-title {
+  font-weight: 600;
+  display: block;
+}
+
+.item-note {
+  font-size: 12px;
+  color: var(--ink-secondary);
+}
+
+table.sheet {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.sheet th,
+table.sheet td {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: top;
+}
+
+table.sheet th {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-weight: 700;
+}
+
+.dropzone {
+  border: 1.5px dashed var(--hairline-strong);
+  border-radius: var(--r-md);
+  padding: var(--space-lg);
+  text-align: center;
+  background: var(--canvas);
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.dropzone:hover,
+.dropzone[data-over='true'] {
+  border-color: var(--terracotta);
+  background: var(--terracotta-tint);
+}
+
+.checkbox {
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  border: 1.5px solid var(--hairline-strong);
+  border-radius: var(--r-sm);
+  background: var(--raised);
+  cursor: pointer;
+  position: relative;
+  margin-top: 2px;
+}
+
+.checkbox:checked {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  color: var(--canvas);
+  font-size: 10px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  font-size: 11px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--ink-secondary);
+}
+
+.legend-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  border-left: 3px solid;
+  display: inline-block;
+}
+
+.empty {
+  text-align: center;
+  padding: var(--space-xl) var(--space-md);
+  color: var(--ink-muted);
+}
+
+.empty h3 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  margin-bottom: var(--space-xs);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.kbd {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  border: 1px solid var(--hairline-strong);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  padding: 0 3px;
+  color: var(--ink-secondary);
+  background: var(--raised);
+}
+
+/* ===========================================================================
+   Responsive — tablet collapses the dock, phone stacks to day cards
+   ========================================================================= */
+
+@media (max-width: 1180px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dock {
+    position: static;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--hairline);
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--gutter);
+  }
+
+  .nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+
+  .brand-motto {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  :root {
+    --gutter: 0.75rem;
+    --hour-height: 46px;
+  }
+
+  .main {
+    padding: var(--space-md) var(--gutter) var(--space-xl);
+  }
+
+  h1 {
+    font-size: 25px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   All-day notices and clipped-content chips
+   ---------------------------------------------------------------------------
+   An all-day notice has no time, so it does not belong on a time axis. Pinning
+   one to 00:00 (the ICS convention) would drag the drawn window down to
+   midnight and cost every other block on the page six rows of height.
+
+   An overnight obligation is the mirror problem: guard from 23:00 to 01:00 is
+   real on both days, but honouring its one-hour tail on the second day would
+   open the axis to midnight for a single block. The chip reports it instead —
+   the axis stays compact and the obligation stays on the page.
+   ------------------------------------------------------------------------- */
+
+.allday-chip {
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: left;
+  padding: 1px 4px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--canvas);
+}
+
+.allday-chip[data-accent='lavender'] { color: var(--lavender); }
+.allday-chip[data-accent='ochre'] { color: #8a5509; }
+.allday-chip[data-accent='terracotta'] { color: var(--terracotta); }
+.allday-chip[data-accent='sky'] { color: var(--sky); }
+.allday-chip[data-accent='sage'] { color: var(--sage); }
+.allday-chip[data-accent='ink'] { color: var(--ink-secondary); }
+
+:root[data-theme='dark'] .allday-chip[data-accent='ochre'] { color: var(--ochre); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .allday-chip[data-accent='ochre'] { color: var(--ochre); }
+}
+
+.edge-chip {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--terracotta);
+  background: color-mix(in srgb, var(--canvas) 88%, transparent);
+  padding: 1px 3px;
+  border-radius: var(--r-sm);
+  pointer-events: none;
+}
+
+.edge-chip[data-edge='bottom'] {
+  bottom: 0;
+}
+
+.edge-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Marker labels sit ABOVE their rule rather than on it, so a deadline at 11:59
+   does not print its label across the 12:00 meal block underneath. */
+.marker-label {
+  transform: translateY(-100%);
+  top: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Designated study windows
+   ---------------------------------------------------------------------------
+   SST, Call to Quarters — a study period the Corps requires you to attend. It
+   is a container for the work the solver places, so it is drawn as a band
+   behind the column rather than as a block competing for the same width. The
+   solver prefers placing work inside one, because time spent there costs the
+   cadet nothing they had not already committed.
+   ------------------------------------------------------------------------- */
+
+.study-window {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--sage) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sage) 28%, transparent);
+  border-left: 3px solid color-mix(in srgb, var(--sage) 55%, transparent);
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.study-window-label {
+  position: absolute;
+  bottom: 1px;
+  right: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sage);
+  opacity: 0.85;
+}
+
+/* One stack at the top of a day column, so an all-day notice and a clipped
+   overnight obligation cannot paint over one another. */
+.day-top-stack {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  right: 2px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.edge-note {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--terracotta);
+  background: color-mix(in srgb, var(--canvas) 90%, transparent);
+  padding: 0 3px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

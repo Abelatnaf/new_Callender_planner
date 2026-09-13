@@ -1,0 +1,602 @@
+/* ===========================================================================
+   ORDER — print
+   ===========================================================================
+
+   The printed page is the product; the web app is the thing that produces it.
+   Barracks device restrictions mean a plan you cannot open is not a plan, so
+   this sheet is the deliverable and the screen is the preview.
+
+   Two decisions worth stating:
+
+   1. NO SEPARATE RENDERER. The build plan specified WeasyPrint and warned
+      about its partial flex/grid support. Rendering through the browser's own
+      print engine removes that whole class of problem: what you see on
+      /print is literally what comes out, because it is the same DOM and the
+      same CSS. There is no second layout engine to keep in parity, no service
+      to deploy, and no font-fetch that can fail at render time.
+
+   2. LEGIBLE WITHOUT COLOUR. Assume a tired mono printer. Every block carries
+      a glyph and a texture in addition to its hue, borders do the structural
+      work, and no information is conveyed by fill alone. `print-color-adjust`
+      is forced ONLY on the thin accent strips, where losing the ink would
+      collapse the hard/soft distinction.
+   ========================================================================= */
+
+@media print {
+  @page {
+    size: letter landscape;
+    margin: 11mm 10mm;
+  }
+
+  :root {
+    /* Paper is white; the warm ivory is a screen affordance. Ink goes darker
+       because 8pt type on paper needs the contrast. */
+    --canvas: #ffffff;
+    --subdued: #ffffff;
+    --raised: #ffffff;
+    --ink: #000000;
+    --ink-secondary: #33302c;
+    --ink-muted: #56514a;
+    --hairline: #b9b2a8;
+    --hairline-strong: #8c857b;
+    --shadow-raised: none;
+    --shadow-overlay: none;
+    color-scheme: light;
+  }
+
+  body {
+    background: #fff;
+    font-size: 8.5pt;
+    line-height: 1.35;
+  }
+
+  /* Chrome never prints. */
+  .dock,
+  .grid-toolbar,
+  .no-print,
+  .button,
+  .button-row,
+  nav,
+  .inspector {
+    display: none !important;
+  }
+
+  .shell {
+    display: block;
+  }
+
+  .main {
+    padding: 0;
+    gap: 0;
+  }
+
+  .card,
+  .grid-frame {
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  /* ---- Page structure -------------------------------------------------- */
+
+  .sheet-page {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .sheet-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .sheet-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1.2pt solid #000;
+    padding-bottom: 2mm;
+    margin-bottom: 3mm;
+  }
+
+  .sheet-head h1 {
+    font-size: 15pt;
+    letter-spacing: 0.08em;
+  }
+
+  .sheet-head .sheet-sub {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 9pt;
+  }
+
+  /* ---- Page 1: the week grid, as a table ------------------------------- */
+  /*
+     Built as a real table rather than a positioned grid. Print engines
+     paginate and scale tables predictably; an absolutely positioned grid
+     depends on a viewport height that does not exist on paper.
+  */
+
+  table.print-week {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 6.6pt;
+  }
+
+  table.print-week th,
+  table.print-week td {
+    border: 0.4pt solid var(--hairline);
+    padding: 0;
+    vertical-align: top;
+    height: 4.6mm;
+  }
+
+  table.print-week thead th {
+    background: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    height: auto;
+    padding: 1mm 0;
+    text-align: center;
+  }
+
+  table.print-week th.print-time {
+    width: 13mm;
+    text-align: right;
+    padding-right: 1mm;
+    font-size: 6.2pt;
+    font-weight: 500;
+    color: #000;
+    background: #fafafa !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* An hour boundary reads heavier than a half hour. */
+  table.print-week tr[data-hour='true'] td,
+  table.print-week tr[data-hour='true'] th {
+    border-top: 0.7pt solid var(--hairline-strong);
+  }
+
+  table.print-week td.print-slot {
+    position: relative;
+  }
+
+  .print-block {
+    display: block;
+    font-size: 6.4pt;
+    line-height: 1.15;
+    padding: 0.3mm 0.7mm;
+    overflow: hidden;
+    border-left: 1.2pt solid #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* The one invariant that must survive greyscale: an order is solid-edged,
+     a suggestion is dashed-edged. */
+  .print-block[data-hard='true'] {
+    border-left-style: solid;
+    background: #e4e4e4;
+  }
+
+  .print-block[data-hard='false'] {
+    border-left-style: dashed;
+    background: #f6f6f6;
+  }
+
+  .print-block .print-glyph {
+    font-weight: 700;
+    margin-right: 0.6mm;
+  }
+
+  .print-block .print-title {
+    font-weight: 600;
+  }
+
+  /* ---- Page 2: the day agenda. The page that gets carried around. ------- */
+
+  .print-agenda {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3mm;
+  }
+
+  .print-day {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 0.5pt solid var(--hairline);
+    padding: 1.5mm 2mm 2mm;
+  }
+
+  .print-day h3 {
+    font-family: var(--font-sans);
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    border-bottom: 0.5pt solid var(--hairline);
+    padding-bottom: 1mm;
+    margin-bottom: 1.2mm;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .print-day ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .print-day li {
+    display: flex;
+    gap: 1.2mm;
+    align-items: flex-start;
+    padding: 0.5mm 0;
+    border-bottom: 0.25pt dotted var(--hairline);
+    font-size: 7pt;
+    break-inside: avoid;
+  }
+
+  .print-day li:last-child {
+    border-bottom: none;
+  }
+
+  /* A real tick box, because this page is worked with a pen. */
+  .print-tick {
+    width: 2.6mm;
+    height: 2.6mm;
+    min-width: 2.6mm;
+    border: 0.5pt solid #000;
+    margin-top: 0.5mm;
+  }
+
+  .print-tick[data-hard='true'] {
+    border-radius: 0;
+    background: #d8d8d8;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-when {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .print-what {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .print-where {
+    font-size: 6.2pt;
+    color: var(--ink-muted);
+  }
+
+  /* ---- Page 3: deadlines, conflicts, unplaced -------------------------- */
+
+  table.print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 7.6pt;
+    margin-bottom: 4mm;
+  }
+
+  table.print-table th,
+  table.print-table td {
+    border-bottom: 0.4pt solid var(--hairline);
+    padding: 1mm 1.5mm;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  table.print-table thead th {
+    border-bottom: 0.8pt solid #000;
+    font-size: 6.6pt;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .print-section-title {
+    font-family: var(--font-display);
+    font-size: 11pt;
+    margin: 0 0 2mm;
+    padding-top: 2mm;
+  }
+
+  .print-notice {
+    border: 0.6pt solid #000;
+    border-left: 2pt solid #000;
+    padding: 1.5mm 2mm;
+    margin-bottom: 3mm;
+    break-inside: avoid;
+    font-size: 7.6pt;
+  }
+
+  .print-notice strong {
+    display: block;
+    font-size: 8pt;
+    margin-bottom: 0.6mm;
+  }
+
+  .print-narrative {
+    font-family: var(--font-display);
+    font-size: 9pt;
+    line-height: 1.45;
+    margin-bottom: 3mm;
+    max-width: none;
+  }
+
+  .print-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3mm;
+    font-size: 6.4pt;
+    border-top: 0.5pt solid var(--hairline);
+    padding-top: 1.5mm;
+    margin-top: 2mm;
+  }
+
+  .print-legend span {
+    white-space: nowrap;
+  }
+
+  .print-foot {
+    position: running(footer);
+    font-size: 6pt;
+    color: var(--ink-muted);
+  }
+}
+
+/* ===========================================================================
+   On screen, the print sheet is a preview of the artifact.
+   Shown at roughly paper proportions so what you approve is what you carry.
+   ========================================================================= */
+
+.sheet-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.sheet-page {
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-raised);
+  padding: var(--space-lg);
+  overflow-x: auto;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: var(--space-sm);
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.sheet-head h1 {
+  font-size: 24px;
+  letter-spacing: 0.08em;
+}
+
+.sheet-sub {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+
+table.print-week {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 10px;
+  min-width: 720px;
+}
+
+table.print-week th,
+table.print-week td {
+  border: 1px solid var(--hairline);
+  padding: 0;
+  vertical-align: top;
+  height: 15px;
+}
+
+table.print-week thead th {
+  background: var(--subdued);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 4px 0;
+  height: auto;
+  text-align: center;
+}
+
+table.print-week th.print-time {
+  width: 46px;
+  text-align: right;
+  padding-right: 4px;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+table.print-week tr[data-hour='true'] td,
+table.print-week tr[data-hour='true'] th {
+  border-top: 1px solid var(--hairline-strong);
+}
+
+.print-block {
+  display: block;
+  font-size: 9.5px;
+  line-height: 1.2;
+  padding: 1px 3px;
+  overflow: hidden;
+  border-left: 3px solid var(--ink-muted);
+}
+
+.print-block[data-hard='true'] {
+  border-left-style: solid;
+  background: var(--ink-tint);
+}
+
+.print-block[data-hard='false'] {
+  border-left-style: dashed;
+  background: var(--sage-tint);
+}
+
+.print-block .print-glyph {
+  font-weight: 700;
+  margin-right: 2px;
+  opacity: 0.7;
+}
+
+.print-block .print-title {
+  font-weight: 600;
+}
+
+.print-agenda {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-md);
+}
+
+.print-day {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+}
+
+.print-day h3 {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: var(--space-xs);
+  margin-bottom: var(--space-xs);
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-secondary);
+}
+
+.print-day ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.print-day li {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  padding: 3px 0;
+  border-bottom: 1px dotted var(--hairline);
+  font-size: 12px;
+}
+
+.print-day li:last-child {
+  border-bottom: none;
+}
+
+.print-tick {
+  width: 11px;
+  height: 11px;
+  min-width: 11px;
+  border: 1px solid var(--ink-muted);
+  border-radius: 2px;
+  margin-top: 4px;
+}
+
+.print-tick[data-hard='true'] {
+  background: var(--ink-tint);
+}
+
+.print-when {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--ink-secondary);
+}
+
+.print-what {
+  flex: 1;
+  min-width: 0;
+}
+
+.print-where {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+table.print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: var(--space-md);
+}
+
+table.print-table th,
+table.print-table td {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+table.print-table thead th {
+  border-bottom: 2px solid var(--ink);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.print-section-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  margin: 0 0 var(--space-sm);
+}
+
+.print-notice {
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--r);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-sm);
+  font-size: 13px;
+}
+
+.print-notice strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.print-narrative {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: var(--space-md);
+}
+
+.print-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  font-size: 11px;
+  color: var(--ink-secondary);
+  border-top: 1px solid var(--hairline);
+  padding-top: var(--space-sm);
+  margin-top: var(--space-sm);
+}
