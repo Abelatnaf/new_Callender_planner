@@ -22,12 +22,21 @@ bites.
 ```bash
 npm install
 npm run dev          # http://localhost:3000
-npm test             # 165 tests, all pure
+npm test             # all pure, no server needed
+npm run preview      # bundle the whole app into one shareable HTML file
 ```
 
 Nothing else to provision. No database, no account, no API key. `GEMINI_API_KEY`
 in `.env.local` turns on three advisory features; without it every other part
 of the app — parsing, scheduling, printing — works unchanged.
+
+`npm run preview` bundles the real components, pages and engine into a single
+self-contained HTML file — `next/link` and `next/navigation` are aliased to
+small shims, so the preview is the same code and cannot drift from the app.
+Useful for handing someone a working copy with nothing to install. Two things
+need a server and are off in that build: fetching a Canvas feed by URL (the
+CORS proxy is a server route — uploading the .ics still works) and the
+advisory AI.
 
 ---
 

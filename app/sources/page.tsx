@@ -8,6 +8,7 @@ import { detectMatrix, type LongField } from '@/lib/parse/matrix'
 import { maskFeedUrl } from '@/lib/parse/ics'
 import { TERM_TEMPLATE } from '@/lib/parse/term'
 import { exportState, importState } from '@/lib/store/state'
+import { saveFile } from '@/lib/store/download'
 import { buildSampleState } from '@/lib/demo/sample'
 import { weekStartOf } from '@/lib/domain/time'
 
@@ -366,14 +367,10 @@ export default function SourcesPage(): React.ReactNode {
           <button
             type="button"
             className="button secondary small"
-            onClick={() => {
-              const blob = new Blob([exportState(state)], { type: 'application/json' })
-              const url = URL.createObjectURL(blob)
-              const anchor = document.createElement('a')
-              anchor.href = url
-              anchor.download = `order-${state.selectedWeek}.json`
-              anchor.click()
-              URL.revokeObjectURL(url)
+            onClick={async () => {
+              setImportError(null)
+              const result = await saveFile(`order-${state.selectedWeek}.json`, exportState(state))
+              if (!result.ok && result.reason === 'failed') setImportError(result.message)
             }}
           >
             Export
