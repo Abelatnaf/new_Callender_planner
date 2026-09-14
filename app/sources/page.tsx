@@ -131,8 +131,8 @@ export default function SourcesPage(): React.ReactNode {
         {!state.matrix ? (
           <UploadDropzone
             label="Drop the matrix here"
-            hint="CSV exported from the published schedule. A grid of times against days, or one row per event — both are read."
-            accept=".csv,.txt,text/csv"
+            hint="A spreadsheet (.xlsx) or CSV of the published schedule. A grid of times against days, or one row per event — both are read, and merged cells are handled."
+            accept=".csv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onFile={(file) =>
               setMatrix({ filename: file.name, text: file.text, receivedAt: new Date().toISOString() })
             }
@@ -185,8 +185,8 @@ export default function SourcesPage(): React.ReactNode {
           <>
             <UploadDropzone
               label="Drop your course schedule"
-              hint="One row per section: course_code, title, days, start_time, end_time, location."
-              accept=".csv,.txt,text/csv"
+              hint="Spreadsheet or CSV, one row per section: course_code, title, days, start_time, end_time, location."
+              accept=".csv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               onFile={(file) =>
                 setTerm({ filename: file.name, text: file.text, receivedAt: new Date().toISOString() })
               }

@@ -221,9 +221,19 @@ function lineByLineFallback(text: string, delimiter: string, warnings: string[])
 /**
  * The header is the first row that looks structural rather than decorative.
  *
- * Heuristic: a header row has at least two non-empty cells and no cell that
- * looks like data (a time range, a bare time). A one-cell row like
- * "CORPS OF CADETS — WEEKLY TRAINING SCHEDULE" is preamble.
+ * Three things disqualify a candidate:
+ *
+ *   - fewer than two non-empty cells — a lone banner like
+ *     "CORPS OF CADETS — WEEKLY TRAINING SCHEDULE"
+ *   - any cell that looks like data (a time range), which means the header is
+ *     already behind us
+ *   - EVERY non-empty cell carrying the same value
+ *
+ * That third rule exists because of spreadsheets. A title merged across
+ * A1:H1 is one cell to a human and eight identical cells once the merge is
+ * expanded — which passes the "at least two non-empty cells" test and gets
+ * picked as the header, leaving the real header row treated as data and the
+ * whole file unreadable. A genuine header names distinct columns.
  */
 function findHeaderRow(records: string[][]): { headerIndex: number; preamble: string[] } {
   const preamble: string[] = []
@@ -231,10 +241,12 @@ function findHeaderRow(records: string[][]): { headerIndex: number; preamble: st
     const row = records[i] ?? []
     const filled = row.filter((c) => c.trim() !== '')
     const looksLikeData = filled.some((c) => /^\d{1,2}[:.]?\d{2}\s*-\s*\d{1,2}[:.]?\d{2}$/.test(c.trim()))
-    if (filled.length >= 2 && !looksLikeData) {
+    const allIdentical = filled.length >= 2 && new Set(filled.map((c) => c.trim())).size === 1
+
+    if (filled.length >= 2 && !looksLikeData && !allIdentical) {
       return { headerIndex: i, preamble }
     }
-    preamble.push(filled.join(' '))
+    preamble.push(filled[0] ?? '')
   }
   return { headerIndex: 0, preamble: [] }
 }

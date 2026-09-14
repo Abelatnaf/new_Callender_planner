@@ -11,7 +11,7 @@ those — so this tool has one job:
 
 **Tell me which hours are actually mine, and what to do in them.**
 
-Drop your files in once a week. Get back a printable operations document: the
+Drop your files in once a week — a spreadsheet or a CSV, whichever the Corps published. Get back a printable operations document: the
 week as a grid, a tear-off page per day, and a written read on where the week
 bites.
 
@@ -177,7 +177,13 @@ npm test
 - **DST** — the week of 1 Nov 2026, where a naive implementation produces a
   23-hour day and misplaces everything after 02:00.
 - **CSV hostility** — BOM, semicolon and tab delimiters, a decorative title
-  row, quoted fields containing delimiters, an unbalanced quote, ragged rows.
+  row, quoted fields containing delimiters, an unbalanced quote, ragged rows,
+  and a title merged across every column (which looks like a header until you
+  notice every cell is the same value).
+- **Spreadsheets** — read from a fixture written by a real Excel writer, not by
+  this reader's own idea of the format: merged cells expanded, times stored as
+  day fractions converted back to clock times, rich text rejoined, and empty
+  self-closing cells that must not swallow the cells after them.
 - **Matrix, both shapes** — grid melt, en-dash time ranges, midnight-crossing
   duty, uniform and applicability parsing, and that a cell reading `N/A` does
   not become an event.
@@ -214,6 +220,9 @@ run and everything else is rebuilt around it.
   failure modes in `test/fixtures/` and the shapes described in the spec.
   Expect to fix it on first contact with the real file — which is why raw
   uploads are kept verbatim and re-parsed on every render.
+- **`.xls` (the legacy binary format) is not read**, only `.xlsx`/`.xlsm`. The
+  old format is not a ZIP and would need a different reader entirely; re-save
+  as .xlsx or CSV.
 - **A conflict prints once.** The screen grid lanes colliding blocks
   side-by-side; on paper the second one is listed in the conflict table rather
   than drawn as an unreadable sliver.

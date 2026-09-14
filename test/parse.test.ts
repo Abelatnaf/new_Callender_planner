@@ -282,3 +282,40 @@ describe('Shape B — the tidy table', () => {
     expect(lab!.span.start < mac!.span.end && mac!.span.start < lab!.span.end).toBe(true)
   })
 })
+
+describe('a merged title banner is not a header', () => {
+  /**
+   * A title merged across A1:H1 is one cell to a human and, once the merge is
+   * expanded for the parser, eight identical cells. That passes a naive "at
+   * least two non-empty cells" header test and gets chosen as the header —
+   * leaving the real header treated as data and the file unreadable. This is
+   * the commonest shape in a published schedule, so it needs an assertion.
+   */
+  it('skips a row whose every cell is the same value', () => {
+    const csv = [
+      'CORPS SCHEDULE,CORPS SCHEDULE,CORPS SCHEDULE,CORPS SCHEDULE',
+      'Effective now,Effective now,Effective now,Effective now',
+      'TIME,MON,TUE,WED',
+      '0700-0730,BRC,BRC,BRC',
+    ].join('\n')
+
+    const table = parseCsv(csv)
+    expect(table.header).toEqual(['TIME', 'MON', 'TUE', 'WED'])
+    expect(table.skippedPreamble).toHaveLength(2)
+  })
+
+  it('still accepts a header that happens to repeat one name', () => {
+    // Distinct columns, one duplicate — a real header, not a banner.
+    const table = parseCsv('Day,Activity,Activity\nMonday,BRC,SRC')
+    expect(table.header).toEqual(['Day', 'Activity', 'Activity'])
+  })
+
+  it('detects the grid shape through a merged banner', () => {
+    const csv = [
+      'WEEKLY TRAINING,WEEKLY TRAINING,WEEKLY TRAINING,WEEKLY TRAINING,WEEKLY TRAINING',
+      'TIME,MON,TUE,WED,THU',
+      '0700-0730,BRC Formation,BRC Formation,BRC Formation,BRC Formation',
+    ].join('\n')
+    expect(detectMatrix(csv).shape).toBe('wide')
+  })
+})
