@@ -71,6 +71,20 @@ describe('time range parsing', () => {
     expect(r?.start).toBe(19 * 60)
     expect(r?.end).toBe(19 * 60 + 45)
   })
+
+  /**
+   * Regression: a bare "2400" (real schedules write Taps this way) parses to
+   * start===end===1440, and spansFor() silently drops anything with
+   * end <= start. Three Taps entries a week vanished with no warning at all —
+   * the worst kind of bug, because nothing looked wrong. It now extends
+   * backward instead of forward when there is no room left in the day.
+   */
+  it('gives a bare "2400" real duration instead of silently vanishing', () => {
+    const r = parseTimeRange('2400', 30)
+    expect(r?.end).toBe(24 * 60)
+    expect(r!.end).toBeGreaterThan(r!.start)
+    expect(r?.start).toBe(24 * 60 - 30)
+  })
 })
 
 describe('compact day codes', () => {
@@ -168,6 +182,42 @@ describe('matrix cell content', () => {
     for (const blank of ['-', '--', '---', 'N/A', 'n/a', 'none', 'nil', '—', '·', '']) {
       expect(parseCell(blank).title, blank).toBe('')
     }
+  })
+
+  /**
+   * A real published VMI schedule uses ordinal class rank (1/C .. 4/C), not a
+   * graduation year, for who a formation applies to. This is genuinely
+   * different vocabulary from `CLASS_YEAR` and has to be read on its own.
+   */
+  it('reads ordinal class rank as an applicability filter', () => {
+    expect(parseAppliesTo('2/C Cadet Leaders')?.classYears).toEqual(['2C'])
+    expect(parseAppliesTo('1/C')?.classYears).toEqual(['1C'])
+    expect(parseAppliesTo('3/C')?.classYears).toEqual(['3C'])
+  })
+
+  it('folds "4/C" into the same RAT population the word "Rats" names', () => {
+    expect(parseAppliesTo('4/C')?.classYears).toEqual(['RAT'])
+  })
+
+  /**
+   * Regression: "Rats and Cadre" was being narrowed to rats only, because the
+   * gate that triggers class-year extraction fires on the mere presence of
+   * the word "rats" anywhere in the text. That silently hid the event from
+   * every cadre member reading their own plan — the opposite of what the
+   * phrase says. Real published schedules say this every single day.
+   */
+  it('does not narrow "Rats and Cadre" to rats alone', () => {
+    expect(parseAppliesTo('Rats and Cadre')).toBeUndefined()
+  })
+
+  it('still restricts a bare "Rats" to rats only', () => {
+    expect(parseAppliesTo('Rats')?.classYears).toEqual(['RAT'])
+    expect(parseAppliesTo('Rats only')?.classYears).toEqual(['RAT'])
+  })
+
+  it('treats "Corps (-)" as applying to everyone, like "Corps" alone', () => {
+    expect(parseAppliesTo('Corps (-)')).toBeUndefined()
+    expect(parseAppliesTo('Corps(-)')).toBeUndefined()
   })
 
   it('treats "All" as applying to everyone, not as a restriction', () => {
@@ -280,5 +330,42 @@ describe('Shape B — the tidy table', () => {
     expect(lab).toBeDefined()
     expect(mac).toBeDefined()
     expect(lab!.span.start < mac!.span.end && mac!.span.start < lab!.span.end).toBe(true)
+  })
+})
+
+describe('a merged title banner is not a header', () => {
+  /**
+   * A title merged across A1:H1 is one cell to a human and, once the merge is
+   * expanded for the parser, eight identical cells. That passes a naive "at
+   * least two non-empty cells" header test and gets chosen as the header —
+   * leaving the real header treated as data and the file unreadable. This is
+   * the commonest shape in a published schedule, so it needs an assertion.
+   */
+  it('skips a row whose every cell is the same value', () => {
+    const csv = [
+      'CORPS SCHEDULE,CORPS SCHEDULE,CORPS SCHEDULE,CORPS SCHEDULE',
+      'Effective now,Effective now,Effective now,Effective now',
+      'TIME,MON,TUE,WED',
+      '0700-0730,BRC,BRC,BRC',
+    ].join('\n')
+
+    const table = parseCsv(csv)
+    expect(table.header).toEqual(['TIME', 'MON', 'TUE', 'WED'])
+    expect(table.skippedPreamble).toHaveLength(2)
+  })
+
+  it('still accepts a header that happens to repeat one name', () => {
+    // Distinct columns, one duplicate — a real header, not a banner.
+    const table = parseCsv('Day,Activity,Activity\nMonday,BRC,SRC')
+    expect(table.header).toEqual(['Day', 'Activity', 'Activity'])
+  })
+
+  it('detects the grid shape through a merged banner', () => {
+    const csv = [
+      'WEEKLY TRAINING,WEEKLY TRAINING,WEEKLY TRAINING,WEEKLY TRAINING,WEEKLY TRAINING',
+      'TIME,MON,TUE,WED,THU',
+      '0700-0730,BRC Formation,BRC Formation,BRC Formation,BRC Formation',
+    ].join('\n')
+    expect(detectMatrix(csv).shape).toBe('wide')
   })
 })

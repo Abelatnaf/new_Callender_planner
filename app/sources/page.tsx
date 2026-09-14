@@ -8,6 +8,7 @@ import { detectMatrix, type LongField } from '@/lib/parse/matrix'
 import { maskFeedUrl } from '@/lib/parse/ics'
 import { TERM_TEMPLATE } from '@/lib/parse/term'
 import { exportState, importState } from '@/lib/store/state'
+import { saveFile } from '@/lib/store/download'
 import { buildSampleState } from '@/lib/demo/sample'
 import { weekStartOf } from '@/lib/domain/time'
 
@@ -123,7 +124,9 @@ export default function SourcesPage(): React.ReactNode {
                 ? 'weekly grid'
                 : detection.shape === 'long'
                   ? 'row per event'
-                  : 'shape unclear'}
+                  : detection.shape === 'sectioned'
+                    ? 'daily sections'
+                    : 'shape unclear'}
             </span>
           )}
         </div>
@@ -131,8 +134,8 @@ export default function SourcesPage(): React.ReactNode {
         {!state.matrix ? (
           <UploadDropzone
             label="Drop the matrix here"
-            hint="CSV exported from the published schedule. A grid of times against days, or one row per event — both are read."
-            accept=".csv,.txt,text/csv"
+            hint="A spreadsheet (.xlsx) or CSV of the published schedule. A grid of times against days, or one row per event — both are read, and merged cells are handled."
+            accept=".csv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onFile={(file) =>
               setMatrix({ filename: file.name, text: file.text, receivedAt: new Date().toISOString() })
             }
@@ -150,7 +153,17 @@ export default function SourcesPage(): React.ReactNode {
               </span>
             </div>
             <div className="button-row" style={{ marginTop: 'var(--space-sm)' }}>
-              {detection?.shape !== 'wide' && (
+              {/*
+                Shape A (wide) and Shape C (sectioned) both auto-detect their
+                own column layout without asking — a wide grid has no columns
+                to map at all, and a sectioned file's real per-day header
+                ("Time, PAX, Event, ...") isn't what `detection.table.header`
+                even holds (that's the file's own decorative title row, which
+                Shape C ignores entirely). The confirm-mapping UI reads from
+                `detection.table.header`, so showing it here would offer a
+                mapping for the wrong row.
+              */}
+              {detection?.shape !== 'wide' && detection?.shape !== 'sectioned' && (
                 <button type="button" className="button secondary small" onClick={() => setMapping(true)}>
                   {state.matrix.mappings && detection && state.matrix.mappings[detection.headerFingerprint]
                     ? 'Change column mapping'
@@ -185,8 +198,8 @@ export default function SourcesPage(): React.ReactNode {
           <>
             <UploadDropzone
               label="Drop your course schedule"
-              hint="One row per section: course_code, title, days, start_time, end_time, location."
-              accept=".csv,.txt,text/csv"
+              hint="Spreadsheet or CSV, one row per section: course_code, title, days, start_time, end_time, location."
+              accept=".csv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               onFile={(file) =>
                 setTerm({ filename: file.name, text: file.text, receivedAt: new Date().toISOString() })
               }
@@ -366,14 +379,10 @@ export default function SourcesPage(): React.ReactNode {
           <button
             type="button"
             className="button secondary small"
-            onClick={() => {
-              const blob = new Blob([exportState(state)], { type: 'application/json' })
-              const url = URL.createObjectURL(blob)
-              const anchor = document.createElement('a')
-              anchor.href = url
-              anchor.download = `order-${state.selectedWeek}.json`
-              anchor.click()
-              URL.revokeObjectURL(url)
+            onClick={async () => {
+              setImportError(null)
+              const result = await saveFile(`order-${state.selectedWeek}.json`, exportState(state))
+              if (!result.ok && result.reason === 'failed') setImportError(result.message)
             }}
           >
             Export

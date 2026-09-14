@@ -11,15 +11,36 @@ import {
   formatClock,
   formatDuration,
   formatHours,
+  isoWeekLabel,
   parseLocalDate,
 } from '@/lib/domain/time'
 import { choosePrintRange, layoutPrintWeek } from '@/lib/print/layout'
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-/** Row resolution on paper. 30 minutes keeps a Letter page to ~36 rows. */
-const ROW_MINUTES = 30
-
+/**
+ * The printed sheet, as a weekly operations order.
+ *
+ * The form is not decoration. A cadet already knows how to read an operations
+ * order — a designation block that says whose it is and which period it
+ * covers, numbered paragraphs you can be told to go look at, and a sources
+ * line that says what it was built from. Borrowing that structure makes the
+ * document legible at a glance to the one person who has to use it, which a
+ * generic grid-and-two-lists layout does not.
+ *
+ * Three decisions that changed from the earlier version, each for a reason:
+ *
+ *   1. THE SUMMARY LEADS. The capacity read and the shortfall were on page
+ *      three, behind the grid and the agenda. They are the only part that
+ *      changes a decision, so they go at the top of page one.
+ *   2. PARAGRAPHS ARE NUMBERED. Numbering is only honest when order carries
+ *      information; here it does, because it makes the document referenceable
+ *      — "para 5" is the friction list, on this sheet and every other week's.
+ *   3. THE DOCUMENT NAMES ITS SOURCES. Which matrix file, which course file,
+ *      when Canvas was last fetched, which engine version and input
+ *      fingerprint. A plan you cannot trace back to its inputs is a plan you
+ *      cannot check when it turns out to be wrong.
+ */
 export default function PrintPage(): React.ReactNode {
   const { state, week, hydrating } = usePlanner()
   const plan = week.plan
@@ -28,25 +49,76 @@ export default function PrintPage(): React.ReactNode {
     () => choosePrintRange(plan.blocks, state.preferences.wake, state.preferences.sleep),
     [plan.blocks, state.preferences.wake, state.preferences.sleep],
   )
-
   const cells = useMemo(() => layoutPrintWeek(plan.blocks, range), [plan.blocks, range])
   const rows = cells.rows
 
   if (hydrating) return <p className="muted">Preparing the sheet…</p>
 
-  const start = parseLocalDate(state.selectedWeek)
-  const end = parseLocalDate(addDays(state.selectedWeek, 6))
-  const title = `${MONTHS[start.m - 1]} ${start.d} – ${start.m === end.m ? end.d : `${MONTHS[end.m - 1]} ${end.d}`}, ${end.y}`
+  const from = parseLocalDate(state.selectedWeek)
+  const to = parseLocalDate(addDays(state.selectedWeek, 6))
+  const period =
+    from.m === to.m
+      ? `${from.d}–${to.d} ${MONTHS[to.m - 1]} ${to.y}`
+      : `${from.d} ${MONTHS[from.m - 1]} – ${to.d} ${MONTHS[to.m - 1]} ${to.y}`
 
-  const deadlines = [...week.tasks]
-    .filter((t) => t.dueAt !== null)
-    .sort((a, b) => (a.dueAt ?? 0) - (b.dueAt ?? 0))
+  const capacity = plan.capacity
+  const committed = capacity.byDay.reduce((sum, d) => sum + d.hardMinutes, 0)
+  const deadlines = [...week.tasks].filter((t) => t.dueAt !== null).sort((a, b) => (a.dueAt ?? 0) - (b.dueAt ?? 0))
+  const short = capacity.unplacedMinutes > 0
+
+  const designation = [
+    state.profile.name.trim() || 'Cadet',
+    state.profile.company.trim() ? `${state.profile.company.trim()} Co` : null,
+    state.profile.classYear.trim() ? `Class of ${state.profile.classYear.trim()}` : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(' · ')
+
+  /** Repeated at the foot of every page, so a dropped page is noticed. */
+  const Foot = ({ page }: { page: number }): React.ReactNode => (
+    <div className="ord-foot">
+      <span>
+        ORDER · <span className="tnum">{isoWeekLabel(state.selectedWeek)}</span> · {designation}
+      </span>
+      <span className="tnum">
+        engine {plan.engineVersion} · {plan.inputsFingerprint} · page {page} of 3
+      </span>
+    </div>
+  )
+
+  const Masthead = ({ para, title }: { para: string; title: string }): React.ReactNode => (
+    <header className="ord-head">
+      <div className="ord-mark">
+        <span className="ord-wordmark">ORDER</span>
+        <span className="ord-rule" aria-hidden="true" />
+        <span className="ord-kind">Weekly operations order</span>
+      </div>
+      <div className="ord-para-label">
+        <span className="ord-para-no tnum">{para}</span>
+        {title}
+      </div>
+      <dl className="ord-designation">
+        <div>
+          <dt>Period</dt>
+          <dd className="tnum">{period}</dd>
+        </div>
+        <div>
+          <dt>Week</dt>
+          <dd className="tnum">{isoWeekLabel(state.selectedWeek)}</dd>
+        </div>
+        <div>
+          <dt>For</dt>
+          <dd>{designation}</dd>
+        </div>
+      </dl>
+    </header>
+  )
 
   return (
     <>
       <header className="page-head no-print">
         <div>
-          <h1>Print sheet</h1>
+          <h1>The order</h1>
           <p>
             Three pages, exactly as they will print. There is no separate renderer and no export
             step — this page is the artifact, so what you approve here is what you carry.
@@ -60,31 +132,61 @@ export default function PrintPage(): React.ReactNode {
       </header>
 
       <div className="sheet-preview">
-        {/* ---- Page 1: the week ------------------------------------------ */}
+        {/* ============ PAGE 1 — situation and time ============ */}
         <section className="sheet-page">
-          <div className="sheet-head">
-            <h1>ORDER</h1>
-            <div>
-              <div className="sheet-sub">{title}</div>
-              <div className="item-note tnum">
-                {state.profile.name || 'Cadet'}
-                {state.profile.company ? ` · ${state.profile.company} Co` : ''}
-                {state.profile.classYear ? ` · ${state.profile.classYear}` : ''}
+          <Masthead para="1" title="Situation" />
+
+          {/*
+            The read leads. These are the only figures on the sheet that change
+            what a cadet does next, so they are not buried behind the grid.
+          */}
+          <div className="ord-situation">
+            <div className="ord-figures">
+              <div className="ord-figure">
+                <span className="ord-figure-label">Committed</span>
+                <span className="ord-figure-value tnum">{formatHours(committed)}<i>h</i></span>
+                <span className="ord-figure-note">by the Institute</span>
+              </div>
+              <div className="ord-figure">
+                <span className="ord-figure-label">Yours</span>
+                <span className="ord-figure-value tnum">{formatHours(capacity.freeMinutes)}<i>h</i></span>
+                <span className="ord-figure-note">usable free time</span>
+              </div>
+              <div className="ord-figure">
+                <span className="ord-figure-label">Tasked</span>
+                <span className="ord-figure-value tnum">{formatHours(capacity.placedMinutes)}<i>h</i></span>
+                <span className="ord-figure-note">work scheduled</span>
+              </div>
+              <div className="ord-figure" data-alert={short}>
+                <span className="ord-figure-label">Shortfall</span>
+                <span className="ord-figure-value tnum">{formatHours(capacity.unplacedMinutes)}<i>h</i></span>
+                <span className="ord-figure-note">{short ? 'did not fit — see para 5' : 'all work fits'}</span>
               </div>
             </div>
+
+            <div className="ord-read">
+              {plan.narrative.map((line, index) => (
+                <p key={index}>{line}</p>
+              ))}
+            </div>
+          </div>
+
+          <div className="ord-para-label ord-para-inline">
+            <span className="ord-para-no tnum">2</span>
+            Time
           </div>
 
           <table className="print-week">
             <thead>
               <tr>
                 <th className="print-time" scope="col">
-                  Time
+                  Hr
                 </th>
                 {DAY_ABBR.map((abbr, day) => {
                   const date = parseLocalDate(addDays(state.selectedWeek, day))
                   const carried = cells.carriedIn.get(day) ?? []
                   return (
-                    <th key={abbr} scope="col">
+                    <th key={abbr} scope="col" data-weekend={day >= 5}>
                       {abbr} <span className="tnum">{date.d}</span>
                       {carried.map((block) => (
                         <span className="print-carried tnum" key={block.id}>
@@ -109,7 +211,7 @@ export default function PrintPage(): React.ReactNode {
                       const spec = kindSpec(entry.block.kind)
                       const hard = entry.block.locked || (spec.hard && entry.block.kind !== 'study')
                       return (
-                        <td key={day} className="print-slot" rowSpan={entry.span}>
+                        <td key={day} className="print-slot" rowSpan={entry.span} data-weekend={day >= 5}>
                           <span className="print-block" data-hard={hard}>
                             <span className="print-glyph">{spec.glyph}</span>
                             {entry.offGrid && (
@@ -124,11 +226,24 @@ export default function PrintPage(): React.ReactNode {
                       )
                     }
                     if (cells.occupied.has(key)) return null
-                    return <td key={day} className="print-slot" />
+                    return <td key={day} className="print-slot" data-weekend={day >= 5} />
                   })}
                 </tr>
               ))}
             </tbody>
+            {/* The arithmetic belongs beside the grid it describes. */}
+            <tfoot>
+              <tr>
+                <th className="print-time" scope="row">
+                  Free
+                </th>
+                {capacity.byDay.map((day) => (
+                  <td key={day.day} className="ord-daytotal tnum" data-weekend={day.day >= 5}>
+                    {formatHours(day.freeMinutes)}h
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
           </table>
 
           <div className="print-legend">
@@ -138,33 +253,28 @@ export default function PrintPage(): React.ReactNode {
             <span>
               <strong>Dashed edge</strong> — the app decided; move it freely
             </span>
-            {(['formation', 'class', 'study', 'duty', 'meal', 'exam'] as const).map((kind) => (
+            {(['formation', 'class', 'lab', 'study', 'duty', 'meal', 'exam'] as const).map((kind) => (
               <span key={kind}>
                 <strong>{kindSpec(kind).glyph}</strong> {kindSpec(kind).label}
               </span>
             ))}
           </div>
+
+          <Foot page={1} />
         </section>
 
-        {/* ---- Page 2: the day agenda ----------------------------------- */}
+        {/* ============ PAGE 2 — execution ============ */}
         <section className="sheet-page">
-          <div className="sheet-head">
-            <h1>The days</h1>
-            <div className="sheet-sub">Tick as you go</div>
-          </div>
+          <Masthead para="3" title="Execution" />
+          <p className="ord-instruction">
+            One column per day, in order. Tick as you go. A shaded box is an obligation; an open box
+            is work this plan placed and you may move.
+          </p>
 
           <div className="print-agenda">
             {[0, 1, 2, 3, 4, 5, 6].map((day) => {
               const dayFrom = atDay(day, 0)
               const dayTo = atDay(day + 1, 0)
-              /**
-               * Overlap, not start-of-day.
-               *
-               * Guard that runs 23:00 Friday to 01:00 Saturday is an
-               * obligation on both days. Filtering by start date drops it from
-               * Saturday entirely, and a printed page that silently omits an
-               * obligation is worse than no printed page.
-               */
               const items = plan.blocks
                 .filter((b) => b.kind !== 'open')
                 .filter((b) =>
@@ -173,23 +283,21 @@ export default function PrintPage(): React.ReactNode {
                     : b.span.start >= dayFrom && b.span.start < dayTo,
                 )
                 .sort((a, b) => Math.max(a.span.start, dayFrom) - Math.max(b.span.start, dayFrom))
-              const dayCapacity = plan.capacity.byDay[day]
+              const dayCapacity = capacity.byDay[day]
               const date = parseLocalDate(addDays(state.selectedWeek, day))
 
               return (
-                <div className="print-day" key={day}>
+                <div className="print-day" key={day} data-weekend={day >= 5}>
                   <h3>
                     <span>
                       {DAY_NAMES[day]} <span className="tnum">{date.d}</span>
                     </span>
-                    <span className="tnum" style={{ fontWeight: 500 }}>
+                    <span className="tnum print-day-free">
                       {dayCapacity ? `${formatHours(dayCapacity.freeMinutes)}h free` : ''}
                     </span>
                   </h3>
                   {items.length === 0 ? (
-                    <p className="item-note" style={{ margin: 0 }}>
-                      Nothing scheduled. The whole day is yours.
-                    </p>
+                    <p className="ord-empty-day">No obligations. The whole day is yours.</p>
                   ) : (
                     <ul>
                       {items.map((block) => {
@@ -227,26 +335,16 @@ export default function PrintPage(): React.ReactNode {
               )
             })}
           </div>
+
+          <Foot page={2} />
         </section>
 
-        {/* ---- Page 3: deadlines, conflicts, what did not fit ------------ */}
+        {/* ============ PAGE 3 — deadlines, friction, sources ============ */}
         <section className="sheet-page">
-          <div className="sheet-head">
-            <h1>The read</h1>
-            <div className="sheet-sub">Deadlines, collisions, and what did not fit</div>
-          </div>
+          <Masthead para="4" title="Deadlines" />
 
-          <div className="print-narrative">
-            {plan.narrative.map((line, index) => (
-              <p key={index} style={{ margin: '0 0 4px' }}>
-                {line}
-              </p>
-            ))}
-          </div>
-
-          <h2 className="print-section-title">Deadlines</h2>
           {deadlines.length === 0 ? (
-            <p className="item-note">No deadlines this week.</p>
+            <p className="ord-instruction">No deadlines fall in this period.</p>
           ) : (
             <table className="print-table">
               <thead>
@@ -255,7 +353,7 @@ export default function PrintPage(): React.ReactNode {
                   <th>Course</th>
                   <th>Due</th>
                   <th>Effort</th>
-                  <th>Scheduled</th>
+                  <th>Placed</th>
                 </tr>
               </thead>
               <tbody>
@@ -264,20 +362,18 @@ export default function PrintPage(): React.ReactNode {
                   const missing = plan.unplaced.filter((u) => u.taskId === task.id)
                   const due = task.dueAt ?? 0
                   return (
-                    <tr key={task.id}>
+                    <tr key={task.id} data-alert={missing.length > 0}>
                       <td>{task.title}</td>
-                      <td>{task.course ?? '—'}</td>
+                      <td className="tnum">{task.course ?? '—'}</td>
                       <td className="tnum">
-                        {due >= 10080
-                          ? 'next week'
-                          : `${DAY_ABBR[Math.floor(due / 1440)]} ${formatClock(due)}`}
+                        {due >= 10080 ? 'next period' : `${DAY_ABBR[Math.floor(due / 1440)]} ${formatClock(due)}`}
                       </td>
                       <td className="tnum">{formatDuration(task.estimateMinutes)}</td>
-                      <td>
+                      <td className="tnum">
                         {missing.length > 0
-                          ? `✗ ${missing.length} piece${missing.length === 1 ? '' : 's'} unplaced`
+                          ? `✗ ${missing.length} short`
                           : blocks.length > 0
-                            ? `✓ ${blocks.length} block${blocks.length === 1 ? '' : 's'}`
+                            ? `✓ ${blocks.length}`
                             : task.status === 'done'
                               ? '✓ done'
                               : '—'}
@@ -289,13 +385,22 @@ export default function PrintPage(): React.ReactNode {
             </table>
           )}
 
-          {plan.conflicts.length > 0 && (
+          <div className="ord-para-label ord-para-inline">
+            <span className="ord-para-no tnum">5</span>
+            Friction
+          </div>
+
+          {plan.conflicts.length === 0 && plan.unplaced.length === 0 ? (
+            <p className="ord-instruction">
+              No collisions and no unplaced work. Everything the Institute requires and everything
+              you owe both fit inside this period.
+            </p>
+          ) : (
             <>
-              <h2 className="print-section-title">Collisions</h2>
               {plan.conflicts.map((conflict, index) => (
                 <div className="print-notice" key={index}>
                   <strong>
-                    {DAY_NAMES[Math.floor(conflict.span.start / 1440)]}{' '}
+                    Collision · {DAY_NAMES[Math.floor(conflict.span.start / 1440)]}{' '}
                     <span className="tnum">
                       {formatClock(conflict.span.start)}–{formatClock(conflict.span.end)}
                     </span>
@@ -303,45 +408,93 @@ export default function PrintPage(): React.ReactNode {
                   {conflict.note}
                 </div>
               ))}
-            </>
-          )}
 
-          {plan.unplaced.length > 0 && (
-            <>
-              <h2 className="print-section-title">Did not fit</h2>
-              <table className="print-table">
-                <thead>
-                  <tr>
-                    <th>Work</th>
-                    <th>Needs</th>
-                    <th>Why not</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {plan.unplaced.map((item, index) => (
-                    <tr key={`${item.taskId}-${index}`}>
-                      <td>
-                        {item.title}
-                        {item.chunkLabel !== 'session' ? ` · ${item.chunkLabel}` : ''}
-                      </td>
-                      <td className="tnum">{formatDuration(item.minutes)}</td>
-                      <td>{item.detail}</td>
+              {plan.unplaced.length > 0 && (
+                <table className="print-table ord-unplaced">
+                  <thead>
+                    <tr>
+                      <th>Work that did not fit</th>
+                      <th>Needs</th>
+                      <th>Binding constraint</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {plan.unplaced.map((item, index) => (
+                      <tr key={`${item.taskId}-${index}`} data-alert>
+                        <td>
+                          {item.title}
+                          {item.chunkLabel !== 'session' ? ` · ${item.chunkLabel}` : ''}
+                        </td>
+                        <td className="tnum">{formatDuration(item.minutes)}</td>
+                        <td>{item.detail}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </>
           )}
 
-          <div className="print-legend">
-            <span>
-              Engine <span className="tnum">{plan.engineVersion}</span>
-            </span>
-            <span>
-              Fingerprint <span className="tnum">{plan.inputsFingerprint}</span>
-            </span>
-            <span>Ink is obligation. White space is freedom.</span>
+          <div className="ord-para-label ord-para-inline">
+            <span className="ord-para-no tnum">6</span>
+            Sources
           </div>
+
+          {/*
+            Provenance. A plan you cannot trace back to its inputs is a plan you
+            cannot check when it turns out to be wrong — and the first real
+            matrix will make something wrong.
+          */}
+          <table className="print-table ord-sources">
+            <tbody>
+              <tr>
+                <th scope="row">Cadetship matrix</th>
+                <td>{state.matrix ? state.matrix.filename : 'not provided'}</td>
+                <td className="tnum">
+                  {week.reports.find((r) => r.label === 'Cadetship matrix')?.eventCount ?? 0} events
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Course schedule</th>
+                <td>{state.term ? state.term.filename : 'not provided'}</td>
+                <td className="tnum">
+                  {week.reports.find((r) => r.label === 'Course schedule')?.eventCount ?? 0} meetings
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Canvas calendar</th>
+                <td>
+                  {state.canvas
+                    ? `${state.canvas.label} · fetched ${state.canvas.fetchedAt.slice(0, 16).replace('T', ' ')}`
+                    : 'not connected'}
+                </td>
+                <td className="tnum">{week.tasks.filter((t) => t.canvasUid).length} deadlines</td>
+              </tr>
+              <tr>
+                <th scope="row">Added by hand</th>
+                <td>
+                  {state.manualEvents.length} recurring obligation
+                  {state.manualEvents.length === 1 ? '' : 's'}, {state.manualTasks.length} task
+                  {state.manualTasks.length === 1 ? '' : 's'}
+                </td>
+                <td className="tnum">—</td>
+              </tr>
+              <tr>
+                <th scope="row">Engine</th>
+                <td className="tnum">
+                  version {plan.engineVersion} · inputs {plan.inputsFingerprint}
+                </td>
+                <td className="tnum">deterministic</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p className="ord-colophon">
+            Ink is obligation. White space is freedom. Same inputs and same engine version reproduce
+            this sheet exactly — quote the fingerprint if it is ever wrong.
+          </p>
+
+          <Foot page={3} />
         </section>
       </div>
     </>
