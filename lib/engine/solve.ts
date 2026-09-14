@@ -66,6 +66,7 @@ import type {
   WeekEvent,
 } from '../domain/types'
 import { simpleHash } from '../parse/matrix'
+import { clusterConflicts } from './conflicts'
 
 export const ENGINE_VERSION = '2.0.0'
 
@@ -773,9 +774,15 @@ function writeNarrative(input: {
   }
 
   if (conflicts.length > 0) {
-    const blocking = conflicts.filter((c) => c.severity === 'blocking').length
+    // `conflicts` is every PAIRWISE overlap, which over-counts badly the
+    // moment three or more things land in one slot (five alternatives in one
+    // window is C(5,2) = 10 pairs). The narrative counts distinct MOMENTS —
+    // clusters of mutually-overlapping obligations — because that is the
+    // number a cadet actually needs to go resolve.
+    const clusters = clusterConflicts(conflicts)
+    const blocking = clusters.filter((c) => c.severity === 'blocking').length
     out.push(
-      `${conflicts.length} obligation${conflicts.length === 1 ? '' : 's'} collide${conflicts.length === 1 ? 's' : ''} this week${blocking > 0 ? `, ${blocking} of them with no clear precedence` : ''}. The app will not choose for you.`,
+      `${clusters.length} moment${clusters.length === 1 ? '' : 's'} this week ${clusters.length === 1 ? 'has' : 'have'} obligations that collide${blocking > 0 ? `, ${blocking} of them with no clear precedence` : ''}. The app will not choose for you.`,
     )
   }
 
