@@ -600,3 +600,45 @@ table.print-table thead th {
   padding-top: var(--space-sm);
   margin-top: var(--space-sm);
 }
+
+/* The exact start time, printed inside a block whose start does not coincide
+   with its 30-minute row. The row gives the position; this gives the truth.
+   Without it the grid silently reports 07:30 for a 07:40 formation. */
+
+.print-exact {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-secondary);
+}
+
+@media print {
+  .print-exact {
+    font-weight: 700;
+    color: #000;
+  }
+}
+
+/* An obligation carried in from the previous day, whose visible portion falls
+   below the drawn window. Shown in the column header because the grid body has
+   no row for it — and because a sheet that omits an obligation is worse than a
+   sheet with a slightly busier header. */
+
+.print-carried {
+  display: block;
+  font-weight: 600;
+  font-size: 9px;
+  color: var(--terracotta);
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media print {
+  .print-carried {
+    font-size: 5.6pt;
+    color: #000;
+    font-weight: 700;
+  }
+}

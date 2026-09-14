@@ -13,7 +13,7 @@ import {
   formatHours,
   parseLocalDate,
 } from '@/lib/domain/time'
-import type { PlanBlock } from '@/lib/domain/types'
+import { choosePrintRange, layoutPrintWeek } from '@/lib/print/layout'
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -24,70 +24,13 @@ export default function PrintPage(): React.ReactNode {
   const { state, week, hydrating } = usePlanner()
   const plan = week.plan
 
-  const range = useMemo(() => {
-    // Only draw hours the week actually uses. A grid fixed at 05:00–23:30
-    // spends a third of the page on empty rows, which is exactly what makes
-    // the remaining blocks too small to label.
-    let earliest = state.preferences.wake
-    let latest = state.preferences.sleep
-    for (const block of plan.blocks) {
-      if (block.span.end <= block.span.start) continue
-      earliest = Math.min(earliest, block.span.start % 1440)
-      const end = block.span.end % 1440 === 0 ? 1440 : block.span.end % 1440
-      latest = Math.max(latest, end > block.span.start % 1440 ? end : 1440)
-    }
-    return {
-      from: Math.max(0, Math.floor(earliest / ROW_MINUTES) * ROW_MINUTES - ROW_MINUTES),
-      to: Math.min(1440, Math.ceil(latest / ROW_MINUTES) * ROW_MINUTES),
-    }
-  }, [plan.blocks, state.preferences.wake, state.preferences.sleep])
+  const range = useMemo(
+    () => choosePrintRange(plan.blocks, state.preferences.wake, state.preferences.sleep),
+    [plan.blocks, state.preferences.wake, state.preferences.sleep],
+  )
 
-  const rows = useMemo(() => {
-    const out: number[] = []
-    for (let m = range.from; m < range.to; m += ROW_MINUTES) out.push(m)
-    return out
-  }, [range])
-
-  /**
-   * Which block starts in each cell, and how many rows it spans.
-   *
-   * A table cell can carry a rowSpan, so a block is rendered once at its
-   * starting row and the cells it covers are omitted. This is what makes the
-   * printed grid paginate predictably.
-   */
-  const cells = useMemo(() => {
-    const occupied = new Set<string>()
-    const starts = new Map<string, { block: PlanBlock; span: number }>()
-
-    const timed = plan.blocks
-      .filter((b) => b.span.end > b.span.start && kindSpec(b.kind).occupiesTime)
-      .sort((a, b) => a.span.start - b.span.start)
-
-    for (const block of timed) {
-      for (let day = 0; day < 7; day++) {
-        const dayFrom = atDay(day, 0)
-        const dayTo = atDay(day + 1, 0)
-        if (block.span.start >= dayTo || block.span.end <= dayFrom) continue
-
-        const localStart = Math.max(block.span.start - dayFrom, range.from)
-        const localEnd = Math.min(block.span.end - dayFrom, range.to)
-        if (localEnd <= localStart) continue
-
-        const startRow = Math.floor((localStart - range.from) / ROW_MINUTES)
-        const endRow = Math.ceil((localEnd - range.from) / ROW_MINUTES)
-        const key = `${day}:${startRow}`
-
-        // One block per cell on paper: with no lanes to divide, a collision is
-        // shown in the conflict table on page three rather than by overlaying
-        // two unreadable slivers.
-        if (occupied.has(key)) continue
-
-        starts.set(key, { block, span: Math.max(1, endRow - startRow) })
-        for (let r = startRow; r < endRow; r++) occupied.add(`${day}:${r}`)
-      }
-    }
-    return { starts, occupied }
-  }, [plan.blocks, range])
+  const cells = useMemo(() => layoutPrintWeek(plan.blocks, range), [plan.blocks, range])
+  const rows = cells.rows
 
   if (hydrating) return <p className="muted">Preparing the sheet…</p>
 
@@ -139,9 +82,15 @@ export default function PrintPage(): React.ReactNode {
                 </th>
                 {DAY_ABBR.map((abbr, day) => {
                   const date = parseLocalDate(addDays(state.selectedWeek, day))
+                  const carried = cells.carriedIn.get(day) ?? []
                   return (
                     <th key={abbr} scope="col">
                       {abbr} <span className="tnum">{date.d}</span>
+                      {carried.map((block) => (
+                        <span className="print-carried tnum" key={block.id}>
+                          {kindSpec(block.kind).glyph} {block.title} until {formatClock(block.span.end)}
+                        </span>
+                      ))}
                     </th>
                   )
                 })}
@@ -163,6 +112,11 @@ export default function PrintPage(): React.ReactNode {
                         <td key={day} className="print-slot" rowSpan={entry.span}>
                           <span className="print-block" data-hard={hard}>
                             <span className="print-glyph">{spec.glyph}</span>
+                            {entry.offGrid && (
+                              <span className="print-exact tnum">
+                                {formatClock(entry.startMinute, { colon: false })}{' '}
+                              </span>
+                            )}
                             <span className="print-title">{entry.block.title}</span>
                             {entry.span > 1 && entry.block.location ? ` · ${entry.block.location}` : ''}
                           </span>
