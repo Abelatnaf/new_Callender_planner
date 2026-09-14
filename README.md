@@ -189,6 +189,9 @@ npm test
   10-hour week reports a shortfall rather than absorbing it.
 - **Layout** — overlap lanes, and that neither an all-day marker nor a
   one-hour overnight tail can drag the drawn axis to midnight.
+- **The printed sheet** — that a start off the 30-minute row grid carries its
+  exact time (a 07:40 formation must never print as 07:30), and that an
+  overnight duty is reported on the day it ends rather than vanishing.
 - **Security** — the ICS proxy refuses plain http, IP literals, the metadata
   service, embedded credentials, non-standard ports, arbitrary hosts, and
   `instructure.com.evil.test`.
@@ -211,8 +214,6 @@ run and everything else is rebuilt around it.
   failure modes in `test/fixtures/` and the shapes described in the spec.
   Expect to fix it on first contact with the real file — which is why raw
   uploads are kept verbatim and re-parsed on every render.
-- **The printed grid rounds to 30-minute rows.** A 07:40 start reads as 07:30
-  on page one; page two carries exact times.
 - **A conflict prints once.** The screen grid lanes colliding blocks
   side-by-side; on paper the second one is listed in the conflict table rather
   than drawn as an unreadable sliver.
