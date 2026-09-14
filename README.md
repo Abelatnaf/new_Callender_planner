@@ -225,10 +225,42 @@ run and everything else is rebuilt around it.
 
 ## Known limits
 
-- **The matrix parser has never seen a real matrix.** It is built against the
-  failure modes in `test/fixtures/` and the shapes described in the spec.
-  Expect to fix it on first contact with the real file — which is why raw
-  uploads are kept verbatim and re-parsed on every render.
+- **The matrix parser has been tested against one real published schedule**
+  (`test/fixtures/real-master-schedule.csv`, a VMI weekly master training
+  schedule) as well as synthetic fixtures. That file turned out to use a
+  third shape neither of the first two anticipated — repeated per-day
+  sections with no single "day" column — and is now supported as Shape C.
+  It also uses ordinal class rank (1/C .. 4/C) rather than a graduation year
+  for who an event applies to: **enter your rank, not your class year, in
+  the profile's class-year field if your source file does the same** — the
+  two vocabularies are read separately and are not translated between.
+- **Two real rows in that file are read as something they are not.**
+  "Crozet morning and afternoon hours" and "Supper Hours" are dining-hall
+  AVAILABILITY windows — the hall is open across that span, not "you are
+  obligated to be there the whole time" — but nothing in a matrix row
+  distinguishes a facility's open hours from a personal attendance block, so
+  both get read as multi-hour hard obligations. Between them they accounted
+  for over 40% of a 152-conflict week on first contact: every other event
+  that fell inside either window registered as colliding with it. If your
+  matrix contains rows like these, the cleanest fix today is to delete them
+  from the file before uploading; teaching the parser to recognize
+  "hours"-style facility listings automatically is a real option but risks
+  silently hiding a genuinely long mandatory block (a field exercise, an
+  extended duty) the same way, so it wants your input rather than a guess.
+- **Parallel/alternative programs are all read as simultaneously "yours."**
+  The same file lists Corps PT, in-season NCAA athletics, out-season NCAA
+  athletics, and club sports all in roughly the same evening slot — real
+  alternatives a cadet is assigned to exactly one of, not four obligations
+  at once. The applicability model only knows class rank and company; it has
+  no notion of team or sport membership, so it cannot exclude the three that
+  are not yours. This is most of what remains of that 152-conflict count
+  after the facility-hours rows above. Fixing it well means adding a real
+  field to the profile, not guessing which program a cadet is in.
+- **The matrix parser has never seen a real matrix in any shape but the two
+  above.** It is built against the failure modes in `test/fixtures/` and the
+  shapes described in the spec. Expect to fix it on first contact with a
+  different real file — which is why raw uploads are kept verbatim and
+  re-parsed on every render.
 - **`.xls` (the legacy binary format) is not read**, only `.xlsx`/`.xlsm`. The
   old format is not a ZIP and would need a different reader entirely; re-save
   as .xlsx or CSV.

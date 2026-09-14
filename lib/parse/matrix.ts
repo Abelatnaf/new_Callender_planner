@@ -5,10 +5,20 @@
  * plan named: a matrix is called a matrix because it usually *is* one — a grid
  * meant for human eyes, not a tidy table meant for a program.
  *
- * Two shapes are supported and detected automatically:
+ * Three shapes are supported and detected automatically:
  *
- *   Shape A (wide/grid)  rows are time periods, columns are days
- *   Shape B (long/tidy)  one row per event
+ *   Shape A (wide/grid)      rows are time periods, columns are days
+ *   Shape B (long/tidy)      one row per event, one column names the day
+ *   Shape C (daily sections) one repeated block per day: an announcement row
+ *                            ("Monday, September 14, 2026"), a local header,
+ *                            then that day's events, then a blank separator —
+ *                            repeated once per day, seven times, with no
+ *                            single "day" column anywhere in the file. This is
+ *                            what a real published Corps master schedule
+ *                            turned out to actually look like: the two-shape
+ *                            model built against synthetic fixtures had never
+ *                            seen it, and returned zero events on first
+ *                            contact with a real file.
  *
  * Design rule that everything else follows from: never destroy the raw. Every
  * emitted event keeps the cells it came from, so a parser fix can be replayed
@@ -21,7 +31,7 @@ import type { WeekEvent } from '../domain/types'
 import { normalizeHeader, parseCsv, type CsvTable } from './csv'
 import { parseDayCodes, parseTimeRange, parseWeekday } from './timeRange'
 
-export type MatrixShape = 'wide' | 'long' | 'unknown'
+export type MatrixShape = 'wide' | 'long' | 'sectioned' | 'unknown'
 
 /** Canonical fields a Shape B column can be mapped onto. */
 export const LONG_FIELDS = [
@@ -134,10 +144,68 @@ export function detectMatrix(input: string, forcedDelimiter?: string): MatrixDet
     return { shape: 'long', table, suggestedMapping, headerFingerprint, sampleRows: table.rows.slice(0, 5), warnings }
   }
 
+  // Shape C: no "day" column exists anywhere, because the day is announced
+  // once per block ("Monday, September 14, 2026") rather than repeated on
+  // every row. Detected by counting how many rows open with a weekday name —
+  // three or more, and a local header naming Time/Event nearby, is this shape
+  // rather than an ordinary file that happens to mention a weekday in prose.
+  const sectionHeader = findFirstSectionHeader(table.rows)
+  if (sectionHeader && countDayAnnouncements(table.rows) >= 3) {
+    return {
+      shape: 'sectioned',
+      table,
+      suggestedMapping: suggestLongMapping(sectionHeader),
+      headerFingerprint,
+      sampleRows: table.rows.slice(0, 5),
+      warnings,
+    }
+  }
+
   warnings.push(
     'Could not tell whether this is a grid or a row-per-event table. Confirm the column mapping by hand.',
   )
   return { shape: 'unknown', table, suggestedMapping, headerFingerprint, sampleRows: table.rows.slice(0, 5), warnings }
+}
+
+/**
+ * The weekday a day-announcement cell opens with — "Monday, September 14,
+ * 2026" — or `null`. Checked against the leading run of letters only, since
+ * `parseWeekday` expects a clean token and the rest of the cell is prose.
+ * Column 0 in a data row is always a clock time, which this never matches, so
+ * the two row kinds cannot be confused for one another.
+ */
+export function dayAnnouncementIndex(cell: string): number | null {
+  const leading = /^[A-Za-z]+/.exec(cell.trim())?.[0]
+  return leading ? parseWeekday(leading) : null
+}
+
+function countDayAnnouncements(rows: readonly string[][]): number {
+  let count = 0
+  for (const row of rows) {
+    if (dayAnnouncementIndex(row[0] ?? '') !== null) count++
+  }
+  return count
+}
+
+/**
+ * The first row that reads as a local section header: not a day-announcement
+ * itself, and its own header-guessing turns up both an activity column and a
+ * time column. That is enough to distinguish "Time, PAX, Event, Location,
+ * Uniform, Instructor" from an ordinary data or blank row without requiring
+ * an exact header match, since nothing here promises the header is spelled
+ * the same way from one school's export to another's.
+ */
+function findFirstSectionHeader(rows: readonly string[][]): string[] | null {
+  for (const row of rows) {
+    if (dayAnnouncementIndex(row[0] ?? '') !== null) continue
+    if (isSectionHeaderRow(row)) return row
+  }
+  return null
+}
+
+function isSectionHeaderRow(row: readonly string[]): boolean {
+  const mapped = new Set(Object.values(suggestLongMapping(row)))
+  return mapped.has('activity') && (mapped.has('time_range') || mapped.has('start'))
 }
 
 /** Stable hash of the normalized, sorted header set. */
@@ -154,9 +222,14 @@ const FIELD_HINTS: ReadonlyArray<readonly [RegExp, LongField]> = [
   [/^(activity|event|title|description|detail|details|task|duty|name|subject)$/, 'activity'],
   [/^(location|place|where|room|venue|building)$/, 'location'],
   [/^(uniform|dress|uotd|uniform_of_the_day|attire)$/, 'uniform'],
-  [/^(applies_to|who|audience|class|classes|applicability|for|company|companies)$/, 'applies_to'],
+  // "PAX" is military-standard shorthand for "personnel" — precisely the
+  // who-does-this-apply-to column a real published schedule actually uses.
+  [/^(applies_to|who|audience|class|classes|applicability|for|company|companies|pax|attendees)$/, 'applies_to'],
   [/^(kind|type|category|class_type)$/, 'kind'],
-  [/^(notes|note|remarks|comment|comments)$/, 'notes'],
+  // "Instructor" (who runs the event) has no dedicated field of its own; it
+  // rides along as a note, the same way the course-schedule parser folds an
+  // instructor name into `notes` rather than inventing a field for it.
+  [/^(notes|note|remarks|comment|comments|instructor|responsible|poc|point_of_contact)$/, 'notes'],
 ]
 
 export function suggestLongMapping(header: readonly string[]): Record<string, LongField> {
@@ -175,6 +248,7 @@ export function suggestLongMapping(header: readonly string[]): Record<string, Lo
 
 export function parseMatrix(detection: MatrixDetection, options: MatrixParseOptions = {}): MatrixParseResult {
   if (detection.shape === 'wide' && detection.wide) return parseWide(detection, options)
+  if (detection.shape === 'sectioned') return parseSectioned(detection, options)
   return parseLong(detection, options)
 }
 
@@ -354,6 +428,141 @@ function parseLong(detection: MatrixDetection, options: MatrixParseOptions): Mat
   return finish(events, warnings, rejected, options)
 }
 
+/**
+ * Shape C: repeated per-day blocks, with the day established once per block
+ * rather than once per row.
+ *
+ * A single forward pass over the rows, carrying three pieces of state: which
+ * day we are currently inside, and the column mapping for that section's
+ * local header (rebuilt each time a header row is seen — in every real file
+ * observed so far it repeats verbatim day to day, but nothing requires that).
+ * Once both are known, a row is read exactly the way Shape B reads one row —
+ * same time parsing, same applies_to/kind/location/uniform extraction — the
+ * only structural difference is that a row here belongs to ONE day rather
+ * than a set of days parsed from its own cell.
+ */
+function parseSectioned(detection: MatrixDetection, options: MatrixParseOptions): MatrixParseResult {
+  const events: WeekEvent[] = []
+  const warnings: string[] = []
+  const rejected: MatrixParseResult['rejected'] = []
+  const defaultMinutes = options.defaultMinutes ?? 60
+
+  let currentDay: number | null = null
+  let col: {
+    activity: number
+    timeRange: number
+    start: number
+    end: number
+    location: number
+    uniform: number
+    appliesTo: number
+    kind: number
+    notes: number
+  } | null = null
+  const daysSeen = new Set<number>()
+
+  const buildCol = (header: readonly string[]): typeof col => {
+    const mapping = options.mapping ?? suggestLongMapping(header)
+    const columnFor = (field: LongField): number => header.findIndex((h) => mapping[h] === field)
+    return {
+      activity: columnFor('activity'),
+      timeRange: columnFor('time_range'),
+      start: columnFor('start'),
+      end: columnFor('end'),
+      location: columnFor('location'),
+      uniform: columnFor('uniform'),
+      appliesTo: columnFor('applies_to'),
+      kind: columnFor('kind'),
+      notes: columnFor('notes'),
+    }
+  }
+
+  detection.table.rows.forEach((row, rowIndex) => {
+    const dayFromAnnouncement = dayAnnouncementIndex(row[0] ?? '')
+    if (dayFromAnnouncement !== null) {
+      currentDay = dayFromAnnouncement
+      daysSeen.add(dayFromAnnouncement)
+      return
+    }
+
+    if (isSectionHeaderRow(row)) {
+      col = buildCol(row)
+      return
+    }
+
+    if (currentDay === null || col === null || col.activity === -1) return
+
+    const rawTitle = (row[col.activity] ?? '').trim()
+    if (isBlankCell(rawTitle)) return
+
+    let start: number | null = null
+    let end: number | null = null
+
+    if (col.timeRange !== -1) {
+      const r = parseTimeRange(row[col.timeRange] ?? '', defaultMinutes)
+      if (r) {
+        start = r.start
+        end = r.end
+      }
+    }
+    if (start === null && col.start !== -1) {
+      const r = parseTimeRange(row[col.start] ?? '', defaultMinutes)
+      if (r) {
+        start = r.start
+        end = r.end
+      }
+    }
+    if (col.end !== -1) {
+      const e = parseTimeRange(row[col.end] ?? '', 0)
+      if (e && start !== null) {
+        end = e.start <= start ? e.start + MINUTES_PER_DAY : e.start
+      }
+    }
+
+    if (start === null || end === null) {
+      rejected.push({
+        row: rowIndex,
+        column: Math.max(col.start, col.timeRange),
+        value: rawTitle,
+        why: 'Unreadable time.',
+      })
+      return
+    }
+
+    const parsed = parseCell(rawTitle)
+    const declaredKind = col.kind === -1 ? undefined : normalizeKind(row[col.kind] ?? '')
+    const appliesToCell = col.appliesTo === -1 ? undefined : parseAppliesTo(row[col.appliesTo] ?? '')
+
+    for (const s of spansFor(currentDay, start, end)) {
+      events.push(
+        buildEvent({
+          title: parsed.title || rawTitle,
+          kind: declaredKind ?? parsed.kind ?? classifyActivity(parsed.title || rawTitle),
+          span: s,
+          uniform: parsed.uniform ?? cellOrUndefined(row[col.uniform] ?? ''),
+          location: parsed.location ?? cellOrUndefined(row[col.location] ?? ''),
+          appliesTo: appliesToCell ?? parsed.appliesTo,
+          notes: joinNotes(cellOrUndefined(row[col.notes] ?? ''), parsed.notesSink),
+          raw: { row: String(rowIndex), activity: rawTitle, day: String(currentDay) },
+        }),
+      )
+    }
+  })
+
+  if (daysSeen.size > 0 && daysSeen.size < DAYS_PER_WEEK) {
+    const missing = [...Array(DAYS_PER_WEEK).keys()].filter((d) => !daysSeen.has(d))
+    warnings.push(
+      `Only ${daysSeen.size} of 7 days had a section in this file. Missing: ${missing
+        .map((d) => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d])
+        .join(', ')}.`,
+    )
+  }
+  if (rejected.length > 0) {
+    warnings.push(`${rejected.length} row(s) could not be read and were skipped. They are listed so you can fix the source.`)
+  }
+  return finish(events, warnings, rejected, options)
+}
+
 // ---------------------------------------------------------------------------
 // Cell content
 // ---------------------------------------------------------------------------
@@ -480,10 +689,21 @@ function normalizeKind(value: string): Kind | undefined {
 const CLASS_YEAR = /\b(?:class\s*of\s*)?'?((?:19|20)?\d{2})\b/
 const COMPANY = /\b([A-Z]|alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|band)\s*(?:co|company|btry|battery)\b/i
 
-/** `Class of '27 only`, `Rats only`, `Band Co`, `All`, `1st Class`. */
+/**
+ * `1/C`, `2/C`, `3/C`, `4/C` — the Corps-of-Cadets ordinal class-rank
+ * notation (first class down to fourth), which is what a real published
+ * schedule actually uses for who-does-this-apply-to. It is distinct from
+ * `CLASS_YEAR` above, which reads a graduation year like "Class of '27" —
+ * a rank does not say when someone graduates, only their standing this year.
+ * The two are never merged: a cadet's profile has to be told in whichever
+ * vocabulary their own schedule uses.
+ */
+const CLASS_RANK = /\b([1-4])\s*\/\s*c\b/i
+
+/** `Class of '27 only`, `Rats only`, `Band Co`, `All`, `1st Class`, `2/C`. */
 export function parseAppliesTo(segment: string): { classYears?: string[]; companies?: string[] } | undefined {
   const text = segment.trim()
-  if (text === '' || /^(all|everyone|corps|all\s*cadets)$/i.test(text)) return undefined
+  if (text === '' || /^(all|everyone|corps|corps\s*\(-\)|all\s*cadets)$/i.test(text)) return undefined
 
   const out: { classYears?: string[]; companies?: string[] } = {}
 
@@ -492,12 +712,28 @@ export function parseAppliesTo(segment: string): { classYears?: string[]; compan
     out.companies = [normalizeCompany(company[1])]
   }
 
+  // Ordinal class rank is unambiguous notation — "1/C" is not going to turn up
+  // as noise in an ordinary title the way a bare two-digit number might, so
+  // this is read unconditionally, with no "only"-style trigger word required.
+  // "4/C" is the same population the RAT sentinel already names, so it folds
+  // into that rather than creating a second token for one group of cadets.
+  const rank = CLASS_RANK.exec(text)
+  if (rank?.[1]) {
+    out.classYears = [...(out.classYears ?? []), rank[1] === '4' ? 'RAT' : `${rank[1]}C`]
+  }
+
   // Only treat a year as applicability when the cell says so — `Class of '27`,
   // `27 only`, `Rats`. A bare `2027` in a title is not applicability.
   if (/\b(only|class\s*of|rats?|first\s*class|1st\s*class|third\s*class|3rd\s*class)\b/i.test(text)) {
     const year = CLASS_YEAR.exec(text)
-    if (year?.[1]) out.classYears = [expandYear(year[1])]
-    if (/\brats?\b/i.test(text)) out.classYears = out.classYears ?? ['RAT']
+    if (year?.[1]) out.classYears = [...(out.classYears ?? []), expandYear(year[1])]
+    // "Rats" alone means rats only. "Rats AND CADRE" means rats plus the
+    // upperclass cadre running them — restricting that to rats-only would
+    // silently hide it from every cadre member reading their own plan, which
+    // is the opposite of what the phrase says.
+    if (/\brats?\b/i.test(text) && !/\bcadre\b/i.test(text)) {
+      out.classYears = out.classYears ?? ['RAT']
+    }
   }
 
   return out.classYears || out.companies ? out : undefined

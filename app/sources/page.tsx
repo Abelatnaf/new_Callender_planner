@@ -124,7 +124,9 @@ export default function SourcesPage(): React.ReactNode {
                 ? 'weekly grid'
                 : detection.shape === 'long'
                   ? 'row per event'
-                  : 'shape unclear'}
+                  : detection.shape === 'sectioned'
+                    ? 'daily sections'
+                    : 'shape unclear'}
             </span>
           )}
         </div>
@@ -151,7 +153,17 @@ export default function SourcesPage(): React.ReactNode {
               </span>
             </div>
             <div className="button-row" style={{ marginTop: 'var(--space-sm)' }}>
-              {detection?.shape !== 'wide' && (
+              {/*
+                Shape A (wide) and Shape C (sectioned) both auto-detect their
+                own column layout without asking — a wide grid has no columns
+                to map at all, and a sectioned file's real per-day header
+                ("Time, PAX, Event, ...") isn't what `detection.table.header`
+                even holds (that's the file's own decorative title row, which
+                Shape C ignores entirely). The confirm-mapping UI reads from
+                `detection.table.header`, so showing it here would offer a
+                mapping for the wrong row.
+              */}
+              {detection?.shape !== 'wide' && detection?.shape !== 'sectioned' && (
                 <button type="button" className="button secondary small" onClick={() => setMapping(true)}>
                   {state.matrix.mappings && detection && state.matrix.mappings[detection.headerFingerprint]
                     ? 'Change column mapping'

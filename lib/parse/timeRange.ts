@@ -81,7 +81,15 @@ export function parseTimeRange(input: string, defaultMinutes = 60): TimeRange | 
   if (start === null) return null
 
   if (parts.length === 1) {
-    return { start, end: Math.min(start + defaultMinutes, 1440), crossesMidnight: false }
+    const end = Math.min(start + defaultMinutes, 1440)
+    if (end > start) return { start, end, crossesMidnight: false }
+    // No room to extend forward — start is already at the day's edge, which
+    // only happens for a bare `2400`. Extending forward would clamp end to
+    // start (a zero-length span), and spansFor() drops anything with
+    // end <= start with NO warning: a "Taps 2400" entry would vanish from the
+    // plan silently. Extend backward instead, so a point event pinned to
+    // midnight still has a real, non-zero duration ending exactly there.
+    return { start: Math.max(0, start - defaultMinutes), end: start, crossesMidnight: false }
   }
 
   const second = parts[1]

@@ -107,7 +107,13 @@ export function isKind(value: string): value is Kind {
  * is a whole-word match to stop `lab` matching `Labor Day`.
  */
 const CLASSIFIERS: ReadonlyArray<readonly [RegExp, Kind]> = [
-  [/\b(srb|src|sri|room\s*inspection|in[\s-]?ranks|rack\s*inspection)\b/i, 'inspection'],
+  // The bare word "inspection" is a real gap the jargon-only list above
+  // missed: a title literally named "Inspection Platoon" fell through every
+  // rule to the 'personal' default, which meant it never outranked anything
+  // it collided with — a plain inspection lost a conflict against a lunch
+  // block. Widening this one rule, not narrowing any other, so it cannot
+  // shadow a later rule's match.
+  [/\b(srb|src|sri|room\s*inspection|in[\s-]?ranks|rack\s*inspection|inspection)\b/i, 'inspection'],
   [/\b(brc|erc|trc|formation|accountability|roll\s*call)\b/i, 'formation'],
   [/\b(parade|review|retreat\s*ceremony|pass\s*in\s*review)\b/i, 'parade'],
   [/\b(guard|cq|charge\s*of\s*quarters|duty|watch|orderly)\b/i, 'duty'],

@@ -60,7 +60,13 @@ export function deriveWeek(state: AppState, weekStart: LocalDate, patch?: Constr
       events.push(...result.events)
       reports.push({
         label: 'Cadetship matrix',
-        detail: `${state.matrix.filename} — read as a ${detection.shape === 'wide' ? 'weekly grid' : 'row-per-event table'}`,
+        detail: `${state.matrix.filename} — read as a ${
+          detection.shape === 'wide'
+            ? 'weekly grid'
+            : detection.shape === 'sectioned'
+              ? 'day-by-day schedule'
+              : 'row-per-event table'
+        }`,
         warnings: [...detection.warnings, ...result.warnings, ...result.rejected.map((r) => `Row ${r.row + 1}: ${r.why}`)],
         eventCount: result.events.length,
         ok: result.events.length > 0,
