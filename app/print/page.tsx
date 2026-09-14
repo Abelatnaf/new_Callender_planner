@@ -15,6 +15,7 @@ import {
   parseLocalDate,
 } from '@/lib/domain/time'
 import { choosePrintRange, layoutPrintWeek } from '@/lib/print/layout'
+import { clusterConflicts, describeCluster } from '@/lib/engine/conflicts'
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
@@ -51,6 +52,7 @@ export default function PrintPage(): React.ReactNode {
   )
   const cells = useMemo(() => layoutPrintWeek(plan.blocks, range), [plan.blocks, range])
   const rows = cells.rows
+  const conflictClusters = useMemo(() => clusterConflicts(plan.conflicts), [plan.conflicts])
 
   if (hydrating) return <p className="muted">Preparing the sheet…</p>
 
@@ -390,22 +392,24 @@ export default function PrintPage(): React.ReactNode {
             Friction
           </div>
 
-          {plan.conflicts.length === 0 && plan.unplaced.length === 0 ? (
+          {conflictClusters.length === 0 && plan.unplaced.length === 0 ? (
             <p className="ord-instruction">
               No collisions and no unplaced work. Everything the Institute requires and everything
               you owe both fit inside this period.
             </p>
           ) : (
             <>
-              {plan.conflicts.map((conflict, index) => (
+              {conflictClusters.map((cluster, index) => (
                 <div className="print-notice" key={index}>
                   <strong>
-                    Collision · {DAY_NAMES[Math.floor(conflict.span.start / 1440)]}{' '}
+                    Collision · {DAY_NAMES[Math.floor(cluster.span.start / 1440)]}{' '}
                     <span className="tnum">
-                      {formatClock(conflict.span.start)}–{formatClock(conflict.span.end)}
+                      {formatClock(cluster.span.start)}–{formatClock(cluster.span.end)}
                     </span>
                   </strong>
-                  {conflict.note}
+                  {cluster.items.length} thing{cluster.items.length === 1 ? '' : 's'} compete for this window:{' '}
+                  {describeCluster(cluster)}.
+                  {cluster.severity === 'overlap' ? ' One normally takes precedence, but this sheet does not decide.' : ''}
                 </div>
               ))}
 

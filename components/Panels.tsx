@@ -9,6 +9,7 @@ import {
   formatHours,
 } from '@/lib/domain/time'
 import type { Capacity, Conflict, PlanBlock, Task, Unplaced } from '@/lib/domain/types'
+import { clusterConflicts, describeCluster } from '@/lib/engine/conflicts'
 
 /* ===========================================================================
    Capacity — the most useful thing on the screen
@@ -99,31 +100,58 @@ function capacityLabel(capacity: Capacity): string {
    Conflicts — reported, never resolved
    ========================================================================= */
 
+/**
+ * `conflicts` is every PAIRWISE overlap in the hard layer, which is complete
+ * but unreadable the moment three or more things land in one slot — five
+ * alternative activities in one window is C(5,2) = 10 pairwise lines for what
+ * a cadet sees as one collision. `clusterConflicts` groups any conflicts that
+ * share an obligation into one moment, so this renders "5 things compete for
+ * 16:35–18:35: A, B, C, D, E" once instead of ten near-duplicate sentences.
+ */
 export function ConflictBanner({ conflicts }: { conflicts: Conflict[] }): React.ReactNode {
-  if (conflicts.length === 0) return null
-  const blocking = conflicts.filter((c) => c.severity === 'blocking')
+  const clusters = clusterConflicts(conflicts)
+  if (clusters.length === 0) return null
+  const blocking = clusters.filter((c) => c.severity === 'blocking').length
+
+  const byDay = new Map<number, typeof clusters>()
+  for (const cluster of clusters) {
+    const day = dayOf(cluster.span.start)
+    byDay.set(day, [...(byDay.get(day) ?? []), cluster])
+  }
 
   return (
-    <section className={blocking.length > 0 ? 'banner' : 'banner warn'} aria-labelledby="conflicts-title">
+    <section className={blocking > 0 ? 'banner' : 'banner warn'} aria-labelledby="conflicts-title">
       <h3 id="conflicts-title">
-        {conflicts.length} obligation{conflicts.length === 1 ? '' : 's'} collide
-        {conflicts.length === 1 ? 's' : ''} this week
+        {clusters.length} moment{clusters.length === 1 ? '' : 's'} this week{' '}
+        {clusters.length === 1 ? 'has' : 'have'} obligations colliding
       </h3>
       <p style={{ margin: '2px 0 0', fontSize: 13 }}>
         The app will not pick a winner. An institutional double-booking is a fact about your week that
-        needs a human to resolve, and hiding one of them would be worse than showing both.
+        needs a human to resolve, and hiding one of them would be worse than showing all of them.
       </p>
-      <ul>
-        {conflicts.map((conflict, index) => (
-          <li key={index} style={{ fontSize: 13 }}>
-            <strong className="tnum">
-              {DAY_NAMES[dayOf(conflict.span.start)]} {formatClock(conflict.span.start)}–
-              {formatClock(conflict.span.end)}
-            </strong>{' '}
-            — {conflict.note}
-          </li>
+      <div className="stack tight" style={{ marginTop: 'var(--space-sm)' }}>
+        {[...byDay.entries()].map(([day, dayClusters]) => (
+          <div key={day}>
+            <div className="label" style={{ margin: '6px 0 2px' }}>
+              {DAY_NAMES[day]}
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
+              {dayClusters.map((cluster, index) => (
+                <li key={index} style={{ fontSize: 13, margin: '3px 0' }}>
+                  <strong className="tnum">
+                    {formatClock(cluster.span.start)}–{formatClock(cluster.span.end)}
+                  </strong>{' '}
+                  — {cluster.items.length} thing{cluster.items.length === 1 ? '' : 's'} compete for this window:{' '}
+                  {describeCluster(cluster)}.
+                  {cluster.severity === 'overlap' && (
+                    <span className="item-note"> One normally takes precedence, but the app will not decide.</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
     </section>
   )
 }
