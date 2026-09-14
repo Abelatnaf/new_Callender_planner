@@ -90,26 +90,6 @@
     page-break-after: auto;
   }
 
-  .sheet-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    border-bottom: 1.2pt solid #000;
-    padding-bottom: 2mm;
-    margin-bottom: 3mm;
-  }
-
-  .sheet-head h1 {
-    font-size: 15pt;
-    letter-spacing: 0.08em;
-  }
-
-  .sheet-head .sheet-sub {
-    font-family: var(--font-display);
-    font-style: italic;
-    font-size: 9pt;
-  }
-
   /* ---- Page 1: the week grid, as a table ------------------------------- */
   /*
      Built as a real table rather than a positioned grid. Print engines
@@ -346,9 +326,276 @@
     white-space: nowrap;
   }
 
-  .print-foot {
-    position: running(footer);
-    font-size: 6pt;
+  /* ---- The masthead. What makes this a document rather than a printout. -
+     A cadet already knows how to read an operations order: a designation
+     block that says whose it is and what period it covers, and numbered
+     paragraphs that can be referenced by number. Borrowing that form is what
+     makes the sheet legible at a glance rather than three generic posters. */
+
+  .ord-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'mark designation'
+      'para para';
+    align-items: end;
+    column-gap: 4mm;
+    padding-bottom: 1.5mm;
+    margin-bottom: 2.5mm;
+    border-bottom: 1pt solid #000;
+  }
+
+  .ord-mark {
+    grid-area: mark;
+    display: flex;
+    align-items: baseline;
+    gap: 2.5mm;
+  }
+
+  .ord-wordmark {
+    font-family: var(--font-display);
+    font-size: 13pt;
+    letter-spacing: 0.09em;
+  }
+
+  .ord-rule {
+    width: 0.5pt;
+    height: 3mm;
+    background: #000;
+  }
+
+  .ord-kind {
+    font-size: 6.6pt;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .ord-designation {
+    grid-area: designation;
+    display: flex;
+    gap: 5mm;
+    margin: 0;
+  }
+
+  .ord-designation > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.3mm;
+  }
+
+  .ord-designation dt {
+    margin: 0;
+    font-size: 5.6pt;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .ord-designation dd {
+    margin: 0;
+    font-size: 7.6pt;
+    font-weight: 700;
+  }
+
+  /* A numbered paragraph heading. Numbering is only honest when order carries
+     information — here it does, because it makes the sheet referenceable:
+     "see para 5" means the same thing every week. */
+
+  .ord-para-label {
+    grid-area: para;
+    display: flex;
+    align-items: center;
+    gap: 2mm;
+    font-family: var(--font-display);
+    font-size: 12.5pt;
+    margin: 2mm 0 0;
+  }
+
+  .ord-para-inline {
+    margin: 3.5mm 0 2mm;
+    padding-top: 2mm;
+    border-top: 0.4pt solid var(--hairline);
+    font-size: 10pt;
+  }
+
+  .ord-para-no {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.6mm;
+    height: 4.6mm;
+    min-width: 4.6mm;
+    border: 0.8pt solid #000;
+    font-family: var(--font-sans);
+    font-size: 7.5pt;
+    font-weight: 700;
+  }
+
+  /* ---- Page 1: the read leads, ahead of the grid it summarizes. --------- */
+
+  .ord-situation {
+    display: grid;
+    grid-template-columns: minmax(0, 62mm) 1fr;
+    gap: 4mm;
+    align-items: start;
+    margin-bottom: 3mm;
+  }
+
+  .ord-figures {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4pt;
+    background: #000;
+    border: 0.4pt solid #000;
+  }
+
+  .ord-figure {
+    background: #fff;
+    padding: 1.6mm 2mm;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4mm;
+  }
+
+  .ord-figure-label {
+    font-size: 5.8pt;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .ord-figure-value {
+    font-family: var(--font-display);
+    font-size: 13pt;
+    line-height: 1;
+  }
+
+  .ord-figure-value i {
+    font-style: normal;
+    font-size: 7pt;
+    margin-left: 0.4mm;
+    color: var(--ink-muted);
+  }
+
+  .ord-figure-note {
+    font-size: 5.8pt;
+    color: var(--ink-secondary);
+  }
+
+  /* The shortfall figure must read in monochrome, not by tint alone — a hatch
+     fill and a heavier border carry the alert when the printer has no red. */
+  .ord-figure[data-alert='true'] {
+    background: repeating-linear-gradient(
+      135deg,
+      #fff 0,
+      #fff 1.4mm,
+      #eee 1.4mm,
+      #eee 1.8mm
+    );
+  }
+
+  .ord-figure[data-alert='true'] .ord-figure-value {
+    text-decoration: underline;
+    text-underline-offset: 1.2mm;
+  }
+
+  .ord-read {
+    font-family: var(--font-display);
+    font-size: 8.6pt;
+    line-height: 1.4;
+  }
+
+  .ord-read p {
+    margin: 0 0 1.4mm;
+  }
+
+  .ord-read p:last-child {
+    margin-bottom: 0;
+  }
+
+  .ord-instruction {
+    font-size: 7.6pt;
+    font-style: italic;
+    color: var(--ink-secondary);
+    margin: 0 0 2mm;
+  }
+
+  .ord-empty-day {
+    font-size: 7pt;
+    font-style: italic;
+    color: var(--ink-muted);
+    margin: 0;
+  }
+
+  .print-day-free {
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  /* Weekend columns read at a glance, in a fill that survives greyscale. */
+  table.print-week th[data-weekend='true'],
+  table.print-week td[data-weekend='true'] {
+    background: #fafafa;
+  }
+
+  .print-day[data-weekend='true'] {
+    background: #fafafa;
+  }
+
+  /* Per-day free-time totals, read directly under the column they describe. */
+  table.print-week tfoot th,
+  table.print-week tfoot td {
+    border-top: 0.8pt solid #000;
+    height: auto;
+    padding: 0.8mm 0;
+    text-align: center;
+    font-size: 6.4pt;
+    font-weight: 700;
+  }
+
+  tr[data-alert='true'] td {
+    font-weight: 600;
+  }
+
+  /* Scoped to the unplaced-work table only. The deadlines table already
+     marks a short row with "✗ N short" in its own column; adding the same
+     glyph there would flag the same fact twice on one line. */
+  .ord-unplaced tr[data-alert='true'] td:last-child::before {
+    content: '⚠ ';
+  }
+
+  .ord-sources th[scope='row'] {
+    width: 32mm;
+    font-weight: 700;
+    color: var(--ink-secondary);
+    white-space: nowrap;
+  }
+
+  .ord-colophon {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 7.6pt;
+    color: var(--ink-secondary);
+    margin: 3mm 0 0;
+    padding-top: 2mm;
+    border-top: 0.4pt solid var(--hairline);
+  }
+
+  /* Repeated on every page: a page separated from the packet still identifies
+     itself, and a dropped page is noticed because the numbering skips. */
+  .ord-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 4mm;
+    margin-top: 3mm;
+    padding-top: 1.5mm;
+    border-top: 0.4pt solid var(--hairline);
+    font-size: 5.8pt;
     color: var(--ink-muted);
   }
 }
@@ -371,28 +618,6 @@
   box-shadow: var(--shadow-raised);
   padding: var(--space-lg);
   overflow-x: auto;
-}
-
-.sheet-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-md);
-  border-bottom: 2px solid var(--ink);
-  padding-bottom: var(--space-sm);
-  margin-bottom: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.sheet-head h1 {
-  font-size: 24px;
-  letter-spacing: 0.08em;
-}
-
-.sheet-sub {
-  font-family: var(--font-display);
-  font-style: italic;
-  color: var(--ink-secondary);
 }
 
 table.print-week {
@@ -640,5 +865,289 @@ table.print-table thead th {
     font-size: 5.6pt;
     color: #000;
     font-weight: 700;
+  }
+}
+
+/* ===========================================================================
+   The masthead, on screen. Mirrors the print rules above at readable sizes,
+   so the thing you approve on the /print page looks like the thing you carry.
+   ===========================================================================
+   The document borrows the form of an operations order — a designation
+   block, numbered paragraphs, a sources line — because a cadet already knows
+   how to read one. Numbering is only honest when order carries information;
+   here it does, because a paragraph number is a stable reference across
+   every week's sheet, not a decoration.
+   ========================================================================= */
+
+.ord-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'mark designation'
+    'para para';
+  align-items: end;
+  column-gap: var(--space-md);
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.ord-mark {
+  grid-area: mark;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.ord-wordmark {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0.09em;
+}
+
+.ord-rule {
+  width: 1px;
+  height: 15px;
+  background: var(--hairline-strong);
+}
+
+.ord-kind {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.ord-designation {
+  grid-area: designation;
+  display: flex;
+  gap: 20px;
+  margin: 0;
+}
+
+.ord-designation > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.ord-designation dt {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.ord-designation dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ord-para-label {
+  grid-area: para;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 21px;
+  margin: 10px 0 0;
+}
+
+.ord-para-inline {
+  margin: 22px 0 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+  font-size: 17px;
+}
+
+.ord-para-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ---- The summary strip. This leads the sheet because it is the only part
+   that changes what a cadet does next — everything else is reference. ----- */
+
+.ord-situation {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+  margin-bottom: var(--space-md);
+}
+
+.ord-figures {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--hairline);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.ord-figure {
+  background: var(--raised);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ord-figure-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.ord-figure-value {
+  font-family: var(--font-display);
+  font-size: 27px;
+  line-height: 1.1;
+}
+
+.ord-figure-value i {
+  font-style: normal;
+  font-size: 13px;
+  margin-left: 2px;
+  color: var(--ink-muted);
+}
+
+.ord-figure-note {
+  font-size: 11px;
+  color: var(--ink-secondary);
+}
+
+.ord-figure[data-alert='true'] {
+  background: var(--danger-tint);
+}
+
+.ord-figure[data-alert='true'] .ord-figure-value,
+.ord-figure[data-alert='true'] .ord-figure-note {
+  color: var(--danger);
+}
+
+.ord-read {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.ord-read p {
+  margin: 0 0 8px;
+}
+
+.ord-read p:last-child {
+  margin-bottom: 0;
+}
+
+.ord-instruction {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink-secondary);
+  margin: 0 0 var(--space-sm);
+}
+
+.ord-empty-day {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.print-day-free {
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+table.print-week th[data-weekend='true'],
+table.print-week td[data-weekend='true'] {
+  background: color-mix(in srgb, var(--subdued) 60%, transparent);
+}
+
+.print-day[data-weekend='true'] {
+  background: var(--subdued);
+}
+
+table.print-week tfoot th,
+table.print-week tfoot td {
+  border-top: 2px solid var(--ink);
+  height: auto;
+  padding: 4px 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-secondary);
+}
+
+tr[data-alert='true'] td {
+  font-weight: 600;
+  color: var(--danger);
+}
+
+/* Scoped to the unplaced-work table only, matching the print rule — the
+   deadlines table already marks a short row with "✗ N short" in its own
+   column, so the same glyph there would flag the same fact twice. */
+.ord-unplaced tr[data-alert='true'] td:last-child::before {
+  content: '⚠ ';
+}
+
+.ord-sources th[scope='row'] {
+  width: 140px;
+  font-weight: 700;
+  color: var(--ink-secondary);
+  white-space: nowrap;
+}
+
+.ord-colophon {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-secondary);
+  margin: var(--space-md) 0 0;
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--hairline);
+}
+
+.ord-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--hairline);
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 700px) {
+  .ord-head {
+    grid-template-columns: 1fr;
+  }
+  .ord-designation {
+    justify-content: flex-start;
+  }
+  .ord-designation > div {
+    align-items: flex-start;
+  }
+  .ord-situation {
+    grid-template-columns: 1fr;
   }
 }
